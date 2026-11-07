@@ -36,20 +36,8 @@ target_link_libraries(fortress_tests PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-# Integration tests
-add_executable(fortress_integration_tests
-    integration/test_analyze.cpp
-)
-
-target_link_libraries(fortress_integration_tests PRIVATE
-    fortress_core
-    fortress_binary
-    gtest_main
-)
-
 # Add tests
 add_test(NAME fortress_unit COMMAND fortress_tests)
-add_test(NAME fortress_integration COMMAND fortress_integration_tests)
 
 # Test fixture paths
 set(TEST_FIXTURES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)

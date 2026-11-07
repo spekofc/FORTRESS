@@ -463,7 +463,7 @@ inline std::string cputype_to_string(uint32_t cputype, uint32_t /*cpusubtype*/) 
         case CPU_TYPE_ARM | 0x01000000u: return "arm64";
         case CPU_TYPE_POWERPC: return "ppc";
         case CPU_TYPE_POWERPC64: return "ppc64";
-        default: return "0x" + fortress::to_hex(std::string_view(reinterpret_cast<const char*>(&base_type), 4));
+        default: return "0x" + to_hex(std::string_view(reinterpret_cast<const char*>(&base_type), 4));
     }
 }
 
@@ -480,7 +480,7 @@ inline std::string filetype_to_string(uint32_t filetype) {
         case MH_DYLIB_STUB: return "dylib_stub";
         case MH_DSYM: return "dsym";
         case MH_KEXT_BUNDLE: return "kext_bundle";
-        default: return "0x" + fortress::to_hex(std::string_view(reinterpret_cast<const char*>(&filetype), 4));
+        default: return "0x" + to_hex(std::string_view(reinterpret_cast<const char*>(&filetype), 4));
     }
 }
 

@@ -12,15 +12,12 @@ namespace fortress::pe {
 template<typename T>
 static T read_value(const std::byte* ptr) {
     T val;
-    std::memcpy(&val, ptr, sizeof(T));
+    std::memcpy(&val, static_cast<const void*>(ptr), sizeof(T));
     return val;
 }
 
 static uint16_t read_u16(const std::byte* ptr) { return read_value<uint16_t>(ptr); }
 static uint32_t read_u32(const std::byte* ptr) { return read_value<uint32_t>(ptr); }
-static uint64_t read_u64(const std::byte* ptr) { return read_value<uint64_t>(ptr); }
-static int32_t read_i32(const std::byte* ptr) { return read_value<int32_t>(ptr); }
-static int64_t read_i64(const std::byte* ptr) { return read_value<int64_t>(ptr); }
 
 // Parse entry point
 Result<BinaryAnalysisResult> PEParser::parse(const FileMapping& mapping) {
@@ -36,6 +33,7 @@ Result<BinaryAnalysisResult> PEParser::parse(std::span<const std::byte> data) {
     Context ctx;
     ctx.base = data.data();
     ctx.size = data.size();
+    ctx.result = &result;
 
     auto finish = [&](Error err) -> Result<BinaryAnalysisResult> {
         result.analysis_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -88,8 +86,9 @@ Result<BinaryAnalysisResult> PEParser::parse(std::span<const std::byte> data) {
     result.entry_point = ctx.is_64bit ?
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader64, address_of_entry_point)) :
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader32, address_of_entry_point));
-    result.entry_point_offset = rva_to_raw(ctx, static_cast<uint32_t>(result.entry_point)).has_value() ?
-        static_cast<Offset>(rva_to_raw(ctx, static_cast<uint32_t>(result.entry_point)).value() - ctx.base) :
+    const std::byte* entry_ptr = rva_to_raw(ctx, static_cast<uint32_t>(result.entry_point));
+    result.entry_point_offset = entry_ptr ?
+        static_cast<Offset>(entry_ptr - ctx.base) :
         INVALID_OFFSET;
 
     // Parse data directories
@@ -259,7 +258,7 @@ Result<void> PEParser::parse_sections(Context& ctx) {
             }
         }
 
-        ctx.result_sections.push_back(std::move(info));
+        ctx.result->sections.push_back(std::move(info));
     }
 
     return Result<void>::ok();
@@ -460,7 +459,7 @@ Result<void> PEParser::parse_imports(Context& ctx, BinaryAnalysisResult& result)
                             sym.name = read_string_at(hint_name + 2);
                         }
                     }
-                    sym.address = rva_to_va(ctx, desc->first_thunk + i * 8);
+                    sym.address = rva_to_va(ctx, static_cast<uint32_t>(desc->first_thunk + i * 8));
                 } else {
                     if (thunk & 0x80000000) {
                         sym.import_ordinal = static_cast<uint16_t>(thunk & 0xFFFF);
@@ -471,7 +470,7 @@ Result<void> PEParser::parse_imports(Context& ctx, BinaryAnalysisResult& result)
                             sym.name = read_string_at(hint_name + 2);
                         }
                     }
-                    sym.address = rva_to_va(ctx, desc->first_thunk + i * 4);
+                    sym.address = rva_to_va(ctx, static_cast<uint32_t>(desc->first_thunk + i * 4));
                 }
 
                 import.functions.push_back(sym);
@@ -502,7 +501,7 @@ Result<void> PEParser::parse_relocations(Context& ctx, BinaryAnalysisResult& res
 
         uint32_t page_rva = block->page_rva;
         uint32_t block_size = block->block_size;
-        uint32_t entry_count = (block_size - sizeof(BaseRelocationBlock)) / 2;
+        uint32_t entry_count = static_cast<uint32_t>((block_size - sizeof(BaseRelocationBlock)) / 2);
 
         const uint16_t* entries = reinterpret_cast<const uint16_t*>(reloc_ptr + sizeof(BaseRelocationBlock));
 
@@ -595,22 +594,19 @@ Result<void> PEParser::parse_debug(Context& ctx, BinaryAnalysisResult& result) {
 }
 
 // Parse TLS
-Result<void> PEParser::parse_tls(Context& ctx, BinaryAnalysisResult& result) {
-    if (ctx.directories[DIRECTORY_TLS].size == 0) return Result<void>::ok();
+Result<void> PEParser::parse_tls(Context& /*ctx*/, BinaryAnalysisResult& /*result*/) {
     // TLS parsing for completeness - callbacks are interesting for analysis
     return Result<void>::ok();
 }
 
 // Parse Load Config
-Result<void> PEParser::parse_load_config(Context& ctx, BinaryAnalysisResult& result) {
-    if (ctx.directories[DIRECTORY_LOAD_CONFIG].size == 0) return Result<void>::ok();
+Result<void> PEParser::parse_load_config(Context& /*ctx*/, BinaryAnalysisResult& /*result*/) {
     // Contains security cookie, SEH handlers, CFG info - valuable for analysis
     return Result<void>::ok();
 }
 
 // Parse Resources
-Result<void> PEParser::parse_resources(Context& ctx, BinaryAnalysisResult& result) {
-    if (ctx.directories[DIRECTORY_RESOURCE].size == 0) return Result<void>::ok();
+Result<void> PEParser::parse_resources(Context& /*ctx*/, BinaryAnalysisResult& /*result*/) {
     // Resource directory parsing - complex, skip for now
     return Result<void>::ok();
 }

@@ -67,6 +67,7 @@ public:
     // Detect format without full analysis
     static Result<BinaryFormat> detect_format(const std::filesystem::path& path);
     static Result<BinaryFormat> detect_format(std::span<const std::byte> data);
+    static Result<BinaryFormat> detect_format(const FileMapping& mapping);
 
     // Get supported formats
     static std::vector<BinaryFormat> supported_formats();

@@ -327,7 +327,7 @@ struct Gnuhash {
 #define ELF_ST_VISIBILITY(other) ((other) & 0x3)
 #define ELF32_R_SYM(info)  ((info) >> 8)
 #define ELF32_R_TYPE(info) ((info) & 0xFF)
-#define ELF64_R_SYM(info)  ((info) >> 32)
+#define ELF64_R_SYM(info)  (static_cast<uint32_t>((info) >> 32))
 #define ELF64_R_TYPE(info) ((info) & 0xFFFFFFFF)
 
 // Architecture detection

@@ -17,9 +17,9 @@ static T read_value(const std::byte* ptr) {
 }
 
 // Byte swap helpers
-static uint16_t bswap16(uint16_t x) { return (x >> 8) | (x << 8); }
-static uint32_t bswap32(uint32_t x) { return (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000) | (x << 24); }
-static uint64_t bswap64(uint64_t x) { return (x >> 56) | ((x >> 40) & 0xFF00) | ((x >> 24) & 0xFF0000) | ((x >> 8) & 0xFF000000) | ((x << 8) & 0xFF00000000) | ((x << 24) & 0xFF0000000000) | ((x << 40) & 0xFF000000000000) | (x << 56); }
+[[maybe_unused]] static uint16_t bswap16(uint16_t x) { return (x >> 8) | (x << 8); }
+[[maybe_unused]] static uint32_t bswap32(uint32_t x) { return (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000) | (x << 24); }
+[[maybe_unused]] static uint64_t bswap64(uint64_t x) { return (x >> 56) | ((x >> 40) & 0xFF00) | ((x >> 24) & 0xFF0000) | ((x >> 8) & 0xFF000000) | ((x << 8) & 0xFF00000000) | ((x << 24) & 0xFF0000000000) | ((x << 40) & 0xFF000000000000) | (x << 56); }
 
 template<typename T>
 static T maybe_bswap(T val, bool swap) {
@@ -128,9 +128,9 @@ Result<void> ELFParser::validate_header(Context& ctx) {
     }
 
     // Parse identification
-    ctx.ei_class = ctx.base[4];
-    ctx.ei_data = ctx.base[5];
-    ctx.ei_osabi = ctx.base[7];
+    ctx.ei_class = static_cast<uint8_t>(ctx.base[4]);
+    ctx.ei_data = static_cast<uint8_t>(ctx.base[5]);
+    ctx.ei_osabi = static_cast<uint8_t>(ctx.base[7]);
 
     ctx.is_64bit = (ctx.ei_class == ELFCLASS64);
     ctx.is_little_endian = (ctx.ei_data == ELFDATA2LSB);
@@ -154,26 +154,26 @@ Result<void> ELFParser::validate_header(Context& ctx) {
         ctx.shnum = ctx.ehdr64->e_shnum;
         ctx.shstrndx = ctx.ehdr64->e_shstrndx;
 
-        result.architecture = machine_to_architecture(ctx.ehdr64->e_machine);
-        result.is_64bit = true;
-        result.is_32bit = false;
-        result.endianness = ctx.is_little_endian ? Endianness::Little : Endianness::Big;
-        result.os_abi = osabi_to_string(ctx.ei_osabi);
-        result.machine_type = machine_to_string(ctx.ehdr64->e_machine);
-        result.entry_point = ctx.ehdr64->e_entry;
+        ctx.result->architecture = machine_to_architecture(ctx.ehdr64->e_machine);
+        ctx.result->is_64bit = true;
+        ctx.result->is_32bit = false;
+        ctx.result->endianness = ctx.is_little_endian ? Endianness::Little : Endianness::Big;
+        ctx.result->os_abi = osabi_to_string(ctx.ei_osabi);
+        ctx.result->machine_type = machine_to_string(ctx.ehdr64->e_machine);
+        ctx.result->entry_point = ctx.ehdr64->e_entry;
     } else {
         ctx.ehdr32 = reinterpret_cast<const Ehdr32*>(ctx.base);
         ctx.phnum = ctx.ehdr32->e_phnum;
         ctx.shnum = ctx.ehdr32->e_shnum;
         ctx.shstrndx = ctx.ehdr32->e_shstrndx;
 
-        result.architecture = machine_to_architecture(ctx.ehdr32->e_machine);
-        result.is_64bit = false;
-        result.is_32bit = true;
-        result.endianness = ctx.is_little_endian ? Endianness::Little : Endianness::Big;
-        result.os_abi = osabi_to_string(ctx.ei_osabi);
-        result.machine_type = machine_to_string(ctx.ehdr32->e_machine);
-        result.entry_point = ctx.ehdr32->e_entry;
+        ctx.result->architecture = machine_to_architecture(ctx.ehdr32->e_machine);
+        ctx.result->is_64bit = false;
+        ctx.result->is_32bit = true;
+        ctx.result->endianness = ctx.is_little_endian ? Endianness::Little : Endianness::Big;
+        ctx.result->os_abi = osabi_to_string(ctx.ei_osabi);
+        ctx.result->machine_type = machine_to_string(ctx.ehdr32->e_machine);
+        ctx.result->entry_point = ctx.ehdr32->e_entry;
     }
 
     if (ctx.phnum > 0) {
@@ -278,7 +278,7 @@ Result<void> ELFParser::parse_sections(Context& ctx) {
             }
         }
 
-        result->sections.push_back(std::move(info));
+        ctx.result->sections.push_back(std::move(info));
     }
 
     return Result<void>::ok();
@@ -294,8 +294,8 @@ Result<void> ELFParser::parse_symbols(Context& ctx) {
         uint32_t type = ctx.is_64bit ? ctx.shdrs64[i].sh_type : ctx.shdrs32[i].sh_type;
         if (type == SHT_SYMTAB || type == SHT_DYNSYM) {
             symtab_indices.push_back(i);
-            uint32_t link = ctx.is_64bit ? ctx.shdrs64[i].sh_link : ctx.shdrs32[i].sh_link;
-            strtab_indices.push_back(link);
+            [[maybe_unused]] uint32_t link = ctx.is_64bit ? ctx.shdrs64[i].sh_link : ctx.shdrs32[i].sh_link;
+            strtab_indices.push_back(static_cast<uint16_t>(link));
         }
     }
 
@@ -354,7 +354,7 @@ Result<void> ELFParser::parse_symbols(Context& ctx) {
             sym.is_exported = (sym.binding == SymbolBinding::Global || sym.binding == SymbolBinding::Weak) && !is_dynsym;
             sym.is_imported = is_dynsym && (sym.binding == SymbolBinding::Global || sym.binding == SymbolBinding::Weak) && sym.section_index == 0;
 
-            result->symbols.push_back(sym);
+            ctx.result->symbols.push_back(sym);
         }
     }
 
@@ -382,12 +382,12 @@ Result<void> ELFParser::parse_dynamic(Context& ctx) {
             Size count = dyn_size / dyn_ent;
             std::string soname;
             std::vector<std::string> needed;
-            uint64_t strtab_addr = 0, strtab_size = 0;
-            uint64_t symtab_addr = 0, syment = 0;
-            uint64_t rel_addr = 0, rel_size = 0, rel_ent = 0;
-            uint64_t rela_addr = 0, rela_size = 0, rela_ent = 0;
-            uint64_t pltrel_addr = 0, pltrel_size = 0;
-            bool bind_now = false;
+            [[maybe_unused]] uint64_t strtab_addr = 0, strtab_size = 0;
+            [[maybe_unused]] uint64_t symtab_addr = 0, syment = 0;
+            [[maybe_unused]] uint64_t rel_addr = 0, rel_size = 0, rel_ent = 0;
+            [[maybe_unused]] uint64_t rela_addr = 0, rela_size = 0, rela_ent = 0;
+            [[maybe_unused]] uint64_t pltrel_addr = 0, pltrel_size = 0;
+            [[maybe_unused]] bool bind_now = false;
 
             for (Size j = 0; j < count; ++j) {
                 int64_t tag = 0;
@@ -446,7 +446,7 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
         uint32_t type = ctx.is_64bit ? ctx.shdrs64[i].sh_type : ctx.shdrs32[i].sh_type;
         if (type != SHT_REL && type != SHT_RELA) continue;
 
-        uint32_t link = ctx.is_64bit ? ctx.shdrs64[i].sh_link : ctx.shdrs32[i].sh_link;
+        [[maybe_unused]] uint32_t link = ctx.is_64bit ? ctx.shdrs64[i].sh_link : ctx.shdrs32[i].sh_link;
         uint32_t info = ctx.is_64bit ? ctx.shdrs64[i].sh_info : ctx.shdrs32[i].sh_info;
 
         const std::byte* rel_ptr = nullptr;
@@ -470,7 +470,7 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
                     reloc.virtual_address = r->r_offset;
                     reloc.offset = r->r_offset;
                     uint32_t sym = ELF64_R_SYM(r->r_info);
-                    uint32_t rtype = ELF64_R_TYPE(r->r_info);
+                    [[maybe_unused]] uint32_t rtype = ELF64_R_TYPE(r->r_info);
                     reloc.kind = RelocationKind::Relative; // Simplified
                     reloc.symbol_index = sym;
                     // Type would be architecture-specific
@@ -479,7 +479,7 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
                     reloc.virtual_address = r->r_offset;
                     reloc.offset = r->r_offset;
                     uint32_t sym = ELF32_R_SYM(r->r_info);
-                    uint32_t rtype = ELF32_R_TYPE(r->r_info);
+                    [[maybe_unused]] uint32_t rtype = ELF32_R_TYPE(r->r_info);
                     reloc.kind = RelocationKind::Relative;
                     reloc.symbol_index = sym;
                 }
@@ -489,7 +489,7 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
                     reloc.virtual_address = r->r_offset;
                     reloc.offset = r->r_offset;
                     uint32_t sym = ELF64_R_SYM(r->r_info);
-                    uint32_t rtype = ELF64_R_TYPE(r->r_info);
+                    [[maybe_unused]] uint32_t rtype = ELF64_R_TYPE(r->r_info);
                     reloc.kind = RelocationKind::Relative;
                     reloc.symbol_index = sym;
                     reloc.addend = r->r_addend;
@@ -498,7 +498,7 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
                     reloc.virtual_address = r->r_offset;
                     reloc.offset = r->r_offset;
                     uint32_t sym = ELF32_R_SYM(r->r_info);
-                    uint32_t rtype = ELF32_R_TYPE(r->r_info);
+                    [[maybe_unused]] uint32_t rtype = ELF32_R_TYPE(r->r_info);
                     reloc.kind = RelocationKind::Relative;
                     reloc.symbol_index = sym;
                     reloc.addend = r->r_addend;
@@ -506,16 +506,16 @@ Result<void> ELFParser::parse_relocations(Context& ctx) {
             }
 
             // Resolve symbol name if possible
-            if (reloc.symbol_index > 0 && reloc.symbol_index < result->symbols.size()) {
-                reloc.symbol_name = result->symbols[reloc.symbol_index].name;
+            if (reloc.symbol_index > 0 && reloc.symbol_index < ctx.result->symbols.size()) {
+                reloc.symbol_name = ctx.result->symbols[reloc.symbol_index].name;
             }
 
             // Find containing section
-            if (info < result->sections.size()) {
-                reloc.section_name = result->sections[info].name;
+            if (info < ctx.result->sections.size()) {
+                reloc.section_name = ctx.result->sections[info].name;
             }
 
-            result->relocations.push_back(reloc);
+            ctx.result->relocations.push_back(reloc);
         }
     }
 
@@ -551,8 +551,8 @@ Result<void> ELFParser::parse_notes(Context& ctx) {
 
             if (note->n_type == NT_GNU_BUILD_ID && std::strncmp(name, "GNU", 4) == 0) {
                 const std::byte* desc = note_ptr + sizeof(Note) + namesz;
-                result->debug_info.build_id = to_hex({reinterpret_cast<const char*>(desc), static_cast<size_t>(note->n_descsz)});
-                result->debug_info.has_debug_symbols = true;
+                ctx.result->debug_info.build_id = to_hex({reinterpret_cast<const char*>(desc), static_cast<size_t>(note->n_descsz)});
+                ctx.result->debug_info.has_debug_symbols = true;
             }
 
             note_ptr += sizeof(Note) + namesz + descsz;
@@ -563,37 +563,37 @@ Result<void> ELFParser::parse_notes(Context& ctx) {
 }
 
 // Discover Functions
-Result<void> ELFParser::discover_functions(Context& ctx) {
+Result<void> ELFParser::discover_functions(Context& [[maybe_unused]] ctx) {
     // 1. Functions from symbol table (STT_FUNC)
-    for (const auto& sym : result->symbols) {
+    for (const auto& sym : ctx.result->symbols) {
         if (sym.type == SymbolType::Function && sym.address != 0) {
             FunctionInfo fn;
             fn.address = sym.address;
             fn.name = sym.name;
-            fn.architecture = result->architecture;
+            fn.architecture = ctx.result->architecture;
             fn.confidence = sym.binding == SymbolBinding::Global ? ConfidenceLevel::Confirmed : ConfidenceLevel::High;
             fn.source = sym.is_imported ? FunctionSource::ImportThunk : FunctionSource::SymbolTable;
             fn.has_symbol = true;
             fn.is_exported = sym.is_exported;
             fn.is_imported = sym.is_imported;
 
-            if (sym.section_index > 0 && sym.section_index < result->sections.size()) {
-                fn.section_name = result->sections[sym.section_index].name;
+            if (sym.section_index > 0 && sym.section_index < ctx.result->sections.size()) {
+                fn.section_name = ctx.result->sections[sym.section_index].name;
             }
 
-            result->functions.push_back(fn);
+            ctx.result->functions.push_back(fn);
         }
     }
 
     // 2. Entry point
-    if (result->entry_point != 0) {
+    if (ctx.result->entry_point != 0) {
         FunctionInfo fn;
-        fn.address = result->entry_point;
+        fn.address = ctx.result->entry_point;
         fn.name = "_start";
-        fn.architecture = result->architecture;
+        fn.architecture = ctx.result->architecture;
         fn.confidence = ConfidenceLevel::Confirmed;
         fn.source = FunctionSource::EntryPoint;
-        result->functions.push_back(fn);
+        ctx.result->functions.push_back(fn);
     }
 
     // 3. Init/fini arrays (from dynamic)
@@ -645,7 +645,7 @@ std::string ELFParser::read_string(Context& ctx, const std::byte* strtab, uint32
 
 SectionPermission ELFParser::section_flags_to_permissions(uint64_t flags) const {
     SectionPermission perms = SectionPermission::None;
-    if (flags & SHF_READ) perms = perms | SectionPermission::Read;
+    if (flags & SHF_ALLOC) perms = perms | SectionPermission::Read;
     if (flags & SHF_WRITE) perms = perms | SectionPermission::Write;
     if (flags & SHF_EXECINSTR) perms = perms | SectionPermission::Execute;
     return perms;

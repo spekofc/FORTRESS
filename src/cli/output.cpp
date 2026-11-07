@@ -1,5 +1,6 @@
 // FORTRESS CLI - Output Helpers (placeholder)
 
+#include <fortress/version.h>
 #include <fortress/core/string_utils.h>
 #include <iostream>
 

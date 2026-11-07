@@ -401,6 +401,7 @@ private:
         uint64_t image_base = 0;
         uint32_t section_alignment = 0;
         uint32_t file_alignment = 0;
+        BinaryAnalysisResult* result = nullptr;
         std::vector<std::string> warnings;
         std::vector<std::string> errors;
     };

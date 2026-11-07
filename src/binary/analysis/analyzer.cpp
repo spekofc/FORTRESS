@@ -8,15 +8,17 @@
 #include <fortress/core/hash.h>
 #include <fortress/core/string_utils.h>
 #include <fstream>
+#include <bit>
+#include <array>
 
 namespace fortress {
 
 // Helper: read typed value from buffer
 template<typename T>
 static T read_value(const std::byte* ptr) {
-    T val;
-    std::memcpy(&val, ptr, sizeof(T));
-    return val;
+    std::array<std::byte, sizeof(T)> arr;
+    std::copy(ptr, ptr + sizeof(T), arr.begin());
+    return std::bit_cast<T>(arr);
 }
 
 Result<BinaryFormat> BinaryAnalyzer::detect_format(const std::filesystem::path& path) {
@@ -26,12 +28,13 @@ Result<BinaryFormat> BinaryAnalyzer::detect_format(const std::filesystem::path& 
 }
 
 Result<BinaryFormat> BinaryAnalyzer::detect_format(std::span<const std::byte> data) {
-    if (data.size() < 4) return Error::truncated("Data too small for format detection");
+    if (data.size() < 2) return Error::truncated("Data too small for format detection");
 
-    uint32_t magic = read_value<uint32_t>(data.data());
+    // Read MZ signature (2 bytes)
+    uint16_t magic16 = read_value<uint16_t>(data.data());
 
     // PE: MZ signature at offset 0, PE signature at e_lfanew
-    if (magic == 0x5A4D) { // "MZ"
+    if (magic16 == 0x5A4D) { // "MZ"
         if (data.size() >= 0x40) {
             uint32_t pe_offset = read_value<uint32_t>(data.data() + 0x3C);
             if (pe_offset + 4 <= data.size()) {
@@ -44,16 +47,20 @@ Result<BinaryFormat> BinaryAnalyzer::detect_format(std::span<const std::byte> da
         return BinaryFormat::PE; // Likely PE
     }
 
+    // Need at least 4 bytes for other formats
+    if (data.size() < 4) return Error::truncated("Data too small for format detection");
+    uint32_t magic32 = read_value<uint32_t>(data.data());
+
     // ELF: 0x7F ELF
-    if (magic == 0x464C457F) {
+    if (magic32 == 0x464C457F) {
         return BinaryFormat::ELF;
     }
 
     // Mach-O: FEEDFACE/FEEDFACF/CAFEBABE
-    if (magic == 0xFEEDFACE || magic == 0xFEEDFACF || magic == 0xCEFAEDFE || magic == 0xCFFACFED) {
+    if (magic32 == 0xFEEDFACE || magic32 == 0xFEEDFACF || magic32 == 0xCEFAEDFE || magic32 == 0xCFFACFED) {
         return BinaryFormat::MachO;
     }
-    if (magic == 0xCAFEBABE || magic == 0xBEBAFECA) {
+    if (magic32 == 0xCAFEBABE || magic32 == 0xBEBAFECA) {
         return BinaryFormat::MachO; // Fat binary
     }
 
@@ -93,7 +100,18 @@ Result<BinaryAnalysisResult> BinaryAnalyzer::analyze(const std::filesystem::path
     return analyze(mapping_result.value(), options);
 }
 
-Result<BinaryAnalysisResult> BinaryAnalyzer::analyze(std::span<const std::byte> data, const AnalysisOptions& options) {
+Result<BinaryFormat> BinaryAnalyzer::detect_format(const FileMapping& mapping) {
+    // Read enough bytes to detect all formats
+    // PE needs at least 0x40 bytes (MZ at 0, PE signature at 0x3C)
+    // Mach-O fat binary needs at least 8 bytes
+    // ELF needs at least 4 bytes
+    // PE signature can be at offset up to 0x1000 (4KB) in some cases
+    const Size min_size = 256; // Read enough for all formats including PE signature at offset 0x80+
+    auto data = mapping.data().first(min_size);
+    return detect_format(data);
+}
+
+Result<BinaryAnalysisResult> BinaryAnalyzer::analyze(std::span<const std::byte> data, const AnalysisOptions& /*options*/) {
     // Detect format
     auto format_result = detect_format(data);
     if (!format_result) return format_result.error();
@@ -112,7 +130,7 @@ Result<BinaryAnalysisResult> BinaryAnalyzer::analyze(const FileMapping& mapping,
 
     BinaryFormat format = format_result.value();
 
-    Result<BinaryAnalysisResult> analysis_result;
+    Result<BinaryAnalysisResult> analysis_result = Error::unsupported_operation("Not yet analyzed");
     switch (format) {
         case BinaryFormat::PE:
             analysis_result = analyze_pe(mapping, options);

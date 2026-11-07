@@ -207,6 +207,59 @@ inline std::string to_string(FunctionSource source) {
     }
 }
 
+inline std::string to_string(SymbolType type) {
+    switch (type) {
+        case SymbolType::Function:  return "function";
+        case SymbolType::Data:      return "data";
+        case SymbolType::Section:   return "section";
+        case SymbolType::File:      return "file";
+        case SymbolType::TLS:       return "tls";
+        case SymbolType::IFunc:     return "ifunc";
+        default:                    return "unknown";
+    }
+}
+
+inline std::string to_string(SymbolBinding binding) {
+    switch (binding) {
+        case SymbolBinding::Local:   return "local";
+        case SymbolBinding::Global:  return "global";
+        case SymbolBinding::Weak:    return "weak";
+        case SymbolBinding::Unique:  return "unique";
+        default:                     return "unknown";
+    }
+}
+
+inline std::string to_string(SymbolVisibility visibility) {
+    switch (visibility) {
+        case SymbolVisibility::Default:   return "default";
+        case SymbolVisibility::Internal:  return "internal";
+        case SymbolVisibility::Hidden:    return "hidden";
+        case SymbolVisibility::Protected: return "protected";
+        default:                          return "unknown";
+    }
+}
+
+inline std::string to_string(RelocationKind kind) {
+    switch (kind) {
+        case RelocationKind::Absolute:     return "absolute";
+        case RelocationKind::Relative:     return "relative";
+        case RelocationKind::PCRelative:   return "pc_relative";
+        case RelocationKind::GOTRelative:  return "got_relative";
+        case RelocationKind::PLTRelative:  return "plt_relative";
+        case RelocationKind::TLSCall:      return "tls_call";
+        case RelocationKind::TLSDesc:      return "tls_desc";
+        default:                           return "unknown";
+    }
+}
+
+inline std::string to_string(Endianness endianness) {
+    switch (endianness) {
+        case Endianness::Little: return "little";
+        case Endianness::Big:    return "big";
+        default:                 return "unknown";
+    }
+}
+
 // Address type
 using Address = uint64_t;
 using Offset  = uint64_t;

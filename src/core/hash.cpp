@@ -6,6 +6,8 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <fstream>
+#include <cmath>
 
 namespace fortress {
 
@@ -412,6 +414,7 @@ public:
     }
 
     Result<void> update(std::span<const std::byte> data) override {
+        (void)data; // Suppress unused parameter warning
         // Simplified - just accumulate for now
         // Full BLAKE2b implementation is quite long
         // For production, consider using a reference implementation
@@ -452,6 +455,7 @@ public:
     }
 
     Result<void> update(std::span<const std::byte> data) override {
+        (void)data;
         return Result<void>::ok();
     }
 
@@ -475,6 +479,7 @@ public:
     void reset() override { /* placeholder */ }
 
     Result<void> update(std::span<const std::byte> data) override {
+        (void)data;
         return Result<void>::ok();
     }
 
@@ -495,15 +500,15 @@ private:
 
 Result<std::unique_ptr<HashContext>> create_hash_context(HashAlgorithm algo) {
     switch (algo) {
-        case HashAlgorithm::SHA256:   return std::make_unique<SHA256Context>();
-        case HashAlgorithm::SHA1:     return std::make_unique<SHA1Context>();
-        case HashAlgorithm::MD5:      return std::make_unique<MD5Context>();
-        case HashAlgorithm::BLAKE2b:  return std::make_unique<BLAKE2bContext>();
-        case HashAlgorithm::BLAKE3:   return std::make_unique<BLAKE3Context>();
+        case HashAlgorithm::SHA256:   return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA256Context>());
+        case HashAlgorithm::SHA1:     return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA1Context>());
+        case HashAlgorithm::MD5:      return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<MD5Context>());
+        case HashAlgorithm::BLAKE2b:  return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<BLAKE2bContext>());
+        case HashAlgorithm::BLAKE3:   return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<BLAKE3Context>());
         case HashAlgorithm::SHA3_256:
-        case HashAlgorithm::SHA3_512: return std::make_unique<SHA3Context>(algo);
+        case HashAlgorithm::SHA3_512: return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA3Context>(algo));
         default:
-            return Error::unsupported_hash_algorithm("Unsupported hash algorithm");
+            return Result<std::unique_ptr<HashContext>>::err(Error::unsupported_operation("Unsupported hash algorithm: " + std::to_string(static_cast<int>(algo))));
     }
 }
 
@@ -543,7 +548,7 @@ Result<Digest> hash_file(HashAlgorithm algo, const std::filesystem::path& path) 
     return ctx->finalize();
 }
 
-Result<Digest> hash_file_incremental(HashAlgorithm algo, const std::filesystem::path& path, Size chunk_size) {
+Result<Digest> hash_file_incremental(HashAlgorithm algo, const std::filesystem::path& path, Size /*chunk_size*/) {
     return hash_file(algo, path); // Same for now
 }
 
@@ -601,10 +606,10 @@ double calculate_entropy(std::span<const std::byte> data) {
     for (auto b : data) freq[static_cast<uint8_t>(b)]++;
 
     double entropy = 0.0;
-    double inv_len = 1.0 / data.size();
+    double inv_len = 1.0 / static_cast<double>(data.size());
     for (int i = 0; i < 256; ++i) {
         if (freq[i] > 0) {
-            double p = freq[i] * inv_len;
+            double p = static_cast<double>(freq[i]) * inv_len;
             entropy -= p * std::log2(p);
         }
     }
@@ -679,7 +684,6 @@ uint64_t xxh64(std::span<const std::byte> data, uint64_t seed) {
     const uint64_t PRIME64_1 = 0x9E3779B185EBCA87ULL;
     const uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FULL;
     const uint64_t PRIME64_3 = 0x165667B19E3779F9ULL;
-    const uint64_t PRIME64_4 = 0x85EBCA77C2B2AE63ULL;
     const uint64_t PRIME64_5 = 0x27D4EB2F165667C5ULL;
 
     uint64_t hash = seed + PRIME64_5;
@@ -727,14 +731,14 @@ Result<Digest> Digest::from_hex(std::string_view hex, HashAlgorithm algo) {
         char low = hex[i + 1];
         uint8_t val = 0;
 
-        if (high >= '0' && high <= '9') val = (high - '0') << 4;
-        else if (high >= 'a' && high <= 'f') val = (high - 'a' + 10) << 4;
-        else if (high >= 'A' && high <= 'F') val = (high - 'A' + 10) << 4;
+        if (high >= '0' && high <= '9') val = static_cast<uint8_t>((high - '0') << 4);
+        else if (high >= 'a' && high <= 'f') val = static_cast<uint8_t>((high - 'a' + 10) << 4);
+        else if (high >= 'A' && high <= 'F') val = static_cast<uint8_t>((high - 'A' + 10) << 4);
         else return Error::invalid_argument("Invalid hex character");
 
-        if (low >= '0' && low <= '9') val |= (low - '0');
-        else if (low >= 'a' && low <= 'f') val |= (low - 'a' + 10);
-        else if (low >= 'A' && low <= 'F') val |= (low - 'A' + 10);
+        if (low >= '0' && low <= '9') val |= static_cast<uint8_t>(low - '0');
+        else if (low >= 'a' && low <= 'f') val |= static_cast<uint8_t>(low - 'a' + 10);
+        else if (low >= 'A' && low <= 'F') val |= static_cast<uint8_t>(low - 'A' + 10);
         else return Error::invalid_argument("Invalid hex character");
 
         digest.mutable_bytes()[i / 2] = static_cast<std::byte>(val);
@@ -748,7 +752,8 @@ bool Digest::constant_time_equal(const Digest& other) const noexcept {
     }
     uint8_t diff = 0;
     for (size_t i = 0; i < data_.size(); ++i) {
-        diff |= static_cast<uint8_t>(data_[i]) ^ static_cast<uint8_t>(other.data_[i]);
+        union { std::byte b; uint8_t u; } u1{data_[i]}, u2{other.data_[i]};
+        diff |= u1.u ^ u2.u;
     }
     return diff == 0;
 }
@@ -760,7 +765,7 @@ bool Digest::constant_time_equal(const Digest& other) const noexcept {
 std::string format_digest(const Digest& digest, bool uppercase, bool with_prefix) {
     std::string hex = digest.to_hex();
     if (uppercase) {
-        for (auto& c : hex) c = std::toupper(c);
+        for (auto& c : hex) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
     }
     if (with_prefix) {
         switch (digest.algorithm()) {

@@ -120,19 +120,19 @@ Result<BinaryAnalysisResult> MachOParser::parse(std::span<const std::byte> data)
     discover_functions(ctx);
 
     // Statistics
-    result.total_sections = result.sections.size();
-    result.total_symbols = result.symbols.size();
-    result.total_functions = result.functions.size();
-    result.confirmed_functions = 0;
-    result.estimated_functions = 0;
-    for (const auto& fn : result.functions) {
-        if (fn.confidence >= ConfidenceLevel::High) result.confirmed_functions++;
-        else result.estimated_functions++;
+    ctx.result->total_sections = ctx.result->sections.size();
+    ctx.result->total_symbols = ctx.result->symbols.size();
+    ctx.result->total_functions = ctx.result->functions.size();
+    ctx.result->confirmed_functions = 0;
+    ctx.result->estimated_functions = 0;
+    for (const auto& fn : ctx.result->functions) {
+        if (fn.confidence >= ConfidenceLevel::High) ctx.result->confirmed_functions++;
+        else ctx.result->estimated_functions++;
     }
 
-    for (const auto& sym : result.symbols) {
-        if (sym.is_imported) result.total_imports++;
-        if (sym.is_exported) result.total_exports++;
+    for (const auto& sym : ctx.result->symbols) {
+        if (sym.is_imported) ctx.result->total_imports++;
+        if (sym.is_exported) ctx.result->total_exports++;
     }
 
     return finish(Error::success());
@@ -185,12 +185,9 @@ Result<void> MachOParser::parse_fat_archs(Context& ctx) {
         info.arch = cputype_to_architecture(info.cputype, info.cpusubtype);
         arch_infos.push_back(info);
 
-        // Store in result for reference
+        // Store in warnings for reference
         ctx.warnings.push_back("Fat architecture: " + std::to_string(info.cputype) + " offset=0x" + to_hex(std::string_view(reinterpret_cast<const char*>(&info.offset), 4)));
     }
-
-    // Store for selection
-    ctx.result->metadata["fat_archs"] = arch_infos; // Would need a proper field
 
     return Result<void>::ok();
 }
@@ -215,17 +212,17 @@ Result<void> MachOParser::select_architecture(Context& ctx, Architecture target)
         Architecture arch = cputype_to_architecture(cputype, cpusubtype);
 
         if (target != Architecture::Unknown && arch == target) {
-            best_idx = i;
+            best_idx = static_cast<int>(i);
             break;
         }
 
         // Prefer 64-bit
-        bool is_64 = (cputype & 0x01000000) != 0;
+        bool is_64 = (cputype & 0x01000000u) != 0;
         if (is_64 && (best_arch == Architecture::Unknown || (best_arch != Architecture::ARM64 && best_arch != Architecture::X64))) {
-            best_idx = i;
+            best_idx = static_cast<int>(i);
             best_arch = arch;
         } else if (!is_64 && best_idx == -1) {
-            best_idx = i;
+            best_idx = static_cast<int>(i);
             best_arch = arch;
         }
     }
@@ -234,8 +231,8 @@ Result<void> MachOParser::select_architecture(Context& ctx, Architecture target)
         return Error::unsupported_arch("No suitable architecture in fat binary");
     }
 
-    uint32_t offset = maybe_bswap(archs[best_idx].offset, !ctx.is_little_endian);
-    uint32_t size = maybe_bswap(archs[best_idx].size, !ctx.is_little_endian);
+    uint32_t offset = maybe_bswap(archs[static_cast<size_t>(best_idx)].offset, !ctx.is_little_endian);
+    uint32_t size = maybe_bswap(archs[static_cast<size_t>(best_idx)].size, !ctx.is_little_endian);
 
     if (offset + size > ctx.size) {
         return Error::truncated("Selected architecture extends beyond file");
@@ -465,7 +462,7 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
 }
 
 // Parse Segments
-Result<void> MachOParser::parse_segments(Context& ctx) {
+Result<void> MachOParser::parse_segments(Context& /*ctx*/) {
     // Already collected in parse_load_commands
     return Result<void>::ok();
 }
@@ -497,7 +494,7 @@ Result<void> MachOParser::parse_sections(Context& ctx) {
                 }
 
                 ctx.sections64.push_back(&sect);
-                result->sections.push_back(std::move(info));
+                ctx.result->sections.push_back(std::move(info));
             }
         }
     } else {
@@ -525,7 +522,7 @@ Result<void> MachOParser::parse_sections(Context& ctx) {
                 }
 
                 ctx.sections32.push_back(&sect);
-                result->sections.push_back(std::move(info));
+                ctx.result->sections.push_back(std::move(info));
             }
         }
     }
@@ -628,7 +625,7 @@ Result<void> MachOParser::parse_symbols(Context& ctx) {
 
         if (!sym.name.empty() && sym.name[0] != '\0') {
             sym.is_exported = (sym.binding == SymbolBinding::Global) && !sym.is_imported;
-            result->symbols.push_back(sym);
+            ctx.result->symbols.push_back(sym);
         }
     }
 
@@ -644,7 +641,7 @@ Result<void> MachOParser::parse_dynamic_libraries(Context& ctx) {
         imp.library_name = read_cstring(name_ptr);
 
         // Would need to parse imports from dyld info or indirect symbol table
-        result->imports.push_back(std::move(imp));
+        ctx.result->imports.push_back(std::move(imp));
     }
 
     return Result<void>::ok();
@@ -695,11 +692,11 @@ Result<void> MachOParser::parse_function_starts(Context& ctx) {
         FunctionInfo fn;
         fn.address = addr;
         fn.name = "func_" + to_hex(std::string_view(reinterpret_cast<const char*>(&addr), 8));
-        fn.architecture = result->architecture;
+        fn.architecture = ctx.result->architecture;
         fn.confidence = ConfidenceLevel::Medium;
         fn.source = FunctionSource::Heuristic;
         fn.section_name = "__text";
-        result->functions.push_back(fn);
+        ctx.result->functions.push_back(fn);
     }
 
     return Result<void>::ok();
@@ -766,35 +763,35 @@ Result<void> MachOParser::parse_build_version(Context& ctx) {
 // Discover Functions
 Result<void> MachOParser::discover_functions(Context& ctx) {
     // 1. Functions from symbol table
-    for (const auto& sym : result->symbols) {
+    for (const auto& sym : ctx.result->symbols) {
         if (sym.type == SymbolType::Function && sym.address != 0) {
             FunctionInfo fn;
             fn.address = sym.address;
             fn.name = sym.name;
-            fn.architecture = result->architecture;
+            fn.architecture = ctx.result->architecture;
             fn.confidence = sym.binding == SymbolBinding::Global ? ConfidenceLevel::Confirmed : ConfidenceLevel::High;
             fn.source = sym.is_imported ? FunctionSource::ImportThunk : FunctionSource::SymbolTable;
             fn.has_symbol = true;
             fn.is_exported = sym.is_exported;
             fn.is_imported = sym.is_imported;
 
-            if (sym.section_index > 0 && sym.section_index < result->sections.size()) {
-                fn.section_name = result->sections[sym.section_index].name;
+            if (sym.section_index > 0 && sym.section_index < ctx.result->sections.size()) {
+                fn.section_name = ctx.result->sections[sym.section_index].name;
             }
 
-            result->functions.push_back(fn);
+            ctx.result->functions.push_back(fn);
         }
     }
 
     // 2. Entry point
-    if (result->entry_point != 0) {
+    if (ctx.result->entry_point != 0) {
         FunctionInfo fn;
-        fn.address = result->entry_point;
+        fn.address = ctx.result->entry_point;
         fn.name = "main";
-        fn.architecture = result->architecture;
+        fn.architecture = ctx.result->architecture;
         fn.confidence = ConfidenceLevel::Confirmed;
         fn.source = FunctionSource::EntryPoint;
-        result->functions.push_back(fn);
+        ctx.result->functions.push_back(fn);
     }
 
     return Result<void>::ok();
@@ -831,7 +828,7 @@ std::string MachOParser::read_string(Context& ctx, const std::byte* strtab, uint
     const std::byte* ptr = strtab + offset;
     const std::byte* end = ctx.base + ctx.size;
     while (ptr < end && *ptr != std::byte{0}) ++ptr;
-    return std::string(reinterpret_cast<const char*>(strtab + offset), ptr - (strtab + offset));
+    return std::string(reinterpret_cast<const char*>(strtab + offset), static_cast<size_t>(ptr - (strtab + offset)));
 }
 
 std::string MachOParser::read_cstring(const std::byte* ptr, Size max_len) const {

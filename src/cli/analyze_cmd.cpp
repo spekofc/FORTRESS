@@ -5,7 +5,7 @@
 #include <fortress/core/error.h>
 #include <fortress/core/file_utils.h>
 #include <fortress/core/string_utils.h>
-#include <fortress/core/version.h>
+#include <fortress/version.h>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -232,7 +232,7 @@ static void print_symbols(const BinaryAnalysisResult& result, const AnalyzeOptio
     }
 }
 
-static void print_relocations(const BinaryAnalysisResult& result, const AnalyzeOptions& opts) {
+static void print_relocations(const BinaryAnalysisResult& result, const AnalyzeOptions& /*opts*/) {
     std::cout << "\n=== Relocations (" << result.relocations.size() << ") ===\n";
     std::cout << std::left << std::setw(18) << "Address"
               << std::setw(14) << "Kind"
@@ -253,7 +253,7 @@ static void print_relocations(const BinaryAnalysisResult& result, const AnalyzeO
     }
 }
 
-static void print_debug(const BinaryAnalysisResult& result, const AnalyzeOptions& opts) {
+static void print_debug(const BinaryAnalysisResult& result, const AnalyzeOptions& /*opts*/) {
     std::cout << "\n=== Debug Information ===\n";
     std::cout << "  Has debug symbols: " << (result.debug_info.has_debug_symbols ? "Yes" : "No") << "\n";
     if (!result.debug_info.debug_type.empty()) std::cout << "  Debug type: " << result.debug_info.debug_type << "\n";
@@ -318,7 +318,7 @@ static nlohmann::json to_json(const BinaryAnalysisResult& result) {
         s["virtual_address"] = format_address(sec.virtual_address);
         s["virtual_size"] = sec.virtual_size;
         s["raw_size"] = sec.raw_size;
-        s["file_offset"] = sec.file_offset == INVALID_OFFSET ? nullptr : sec.file_offset;
+        s["file_offset"] = sec.file_offset == INVALID_OFFSET ? nlohmann::json() : nlohmann::json(sec.file_offset);
         s["permissions"] = {
             {"read", sec.is_readable()},
             {"write", sec.is_writable()},
@@ -351,28 +351,28 @@ static nlohmann::json to_json(const BinaryAnalysisResult& result) {
     }
     j["symbols"] = nlohmann::json::array();
     for (const auto& sym : result.symbols) {
-        j["symbols"].push_back({
-            {"address", format_address(sym.address)},
-            {"size", sym.size},
-            {"name", sym.name},
-            {"type", to_string(sym.type)},
-            {"binding", to_string(sym.binding)},
-            {"visibility", to_string(sym.visibility)},
-            {"imported", sym.is_imported},
-            {"exported", sym.is_exported}
-        });
+        nlohmann::json sym_json;
+        sym_json["address"] = format_address(sym.address);
+        sym_json["size"] = sym.size;
+        sym_json["name"] = sym.name;
+        sym_json["type"] = to_string(sym.type);
+        sym_json["binding"] = to_string(sym.binding);
+        sym_json["visibility"] = to_string(sym.visibility);
+        sym_json["imported"] = sym.is_imported;
+        sym_json["exported"] = sym.is_exported;
+        j["symbols"].push_back(sym_json);
     }
     j["functions"] = nlohmann::json::array();
     for (const auto& fn : result.functions) {
-        j["functions"].push_back({
-            {"address", format_address(fn.address)},
-            {"size", fn.size},
-            {"name", fn.name},
-            {"confidence", to_string(fn.confidence)},
-            {"source", to_string(fn.source)},
-            {"exported", fn.is_exported},
-            {"imported", fn.is_imported}
-        });
+        nlohmann::json fn_json;
+        fn_json["address"] = format_address(fn.address);
+        fn_json["size"] = fn.size;
+        fn_json["name"] = fn.name;
+        fn_json["confidence"] = to_string(fn.confidence);
+        fn_json["source"] = to_string(fn.source);
+        fn_json["exported"] = fn.is_exported;
+        fn_json["imported"] = fn.is_imported;
+        j["functions"].push_back(fn_json);
     }
     j["hashes"] = {
         {"md5", result.hashes.md5 ? result.hashes.md5->to_hex() : nullptr},
@@ -412,7 +412,7 @@ int analyze_command(const std::vector<std::string>& args) {
     BinaryAnalyzer analyzer;
     if (!opts.quiet) std::cout << "Analyzing " << opts.input_file << "...\n";
 
-    auto result = analyzer.analyze(opts_input_file, analysis_opts);
+    auto result = analyzer.analyze(opts.input_file, analysis_opts);
     if (!result) {
         std::cerr << "Analysis failed: " << result.error().to_string() << "\n";
         return 1;

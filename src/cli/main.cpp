@@ -1,13 +1,14 @@
 // FORTRESS CLI - Main Entry Point
 
 #include <fortress/core/error.h>
-#include <fortress/core/version.h>
+#include <fortress/version.h>
 #include <fortress/core/string_utils.h>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <iomanip>
 
 namespace fortress::cli {
 
@@ -86,13 +87,17 @@ private:
 
 } // namespace fortress::cli
 
+namespace fortress::cli {
+
 // Forward declarations
 int analyze_command(const std::vector<std::string>& args);
+
+} // namespace fortress::cli
 
 int main(int argc, char* argv[]) {
     fortress::cli::CLI cli(argc, argv);
 
-    cli.register_command({"analyze", "Analyze a binary file", "fortress analyze -i <file> [options]", analyze_command});
+    cli.register_command({"analyze", "Analyze a binary file", "fortress analyze -i <file> [options]", fortress::cli::analyze_command});
 
     // TODO: Add more commands as implemented
     // cli.register_command({"protect", "Protect a binary", "fortress protect -i <file> -o <output> [options]", protect_command});

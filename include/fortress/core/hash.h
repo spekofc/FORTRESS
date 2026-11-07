@@ -29,6 +29,22 @@ constexpr Size BLAKE3_DIGEST_SIZE   = 32;
 // Maximum digest size
 constexpr Size MAX_DIGEST_SIZE = 64;
 
+// Digest size for algorithm (must be before Digest class)
+constexpr Size digest_size_for_algorithm(HashAlgorithm algo) noexcept {
+    switch (algo) {
+        case HashAlgorithm::MD5:      return MD5_DIGEST_SIZE;
+        case HashAlgorithm::SHA1:     return SHA1_DIGEST_SIZE;
+        case HashAlgorithm::SHA256:   return SHA256_DIGEST_SIZE;
+        case HashAlgorithm::SHA384:   return SHA384_DIGEST_SIZE;
+        case HashAlgorithm::SHA512:   return SHA512_DIGEST_SIZE;
+        case HashAlgorithm::SHA3_256: return SHA3_256_DIGEST_SIZE;
+        case HashAlgorithm::SHA3_512: return SHA3_512_DIGEST_SIZE;
+        case HashAlgorithm::BLAKE2b:  return BLAKE2B_DIGEST_SIZE;
+        case HashAlgorithm::BLAKE3:   return BLAKE3_DIGEST_SIZE;
+        default:                      return 0;
+    }
+}
+
 // Hash digest container
 class Digest {
 public:
@@ -69,22 +85,6 @@ private:
     HashAlgorithm algorithm_ = HashAlgorithm::None;
     std::vector<std::byte> data_;
 };
-
-// Digest size for algorithm
-constexpr Size digest_size_for_algorithm(HashAlgorithm algo) noexcept {
-    switch (algo) {
-        case HashAlgorithm::MD5:      return MD5_DIGEST_SIZE;
-        case HashAlgorithm::SHA1:     return SHA1_DIGEST_SIZE;
-        case HashAlgorithm::SHA256:   return SHA256_DIGEST_SIZE;
-        case HashAlgorithm::SHA384:   return SHA384_DIGEST_SIZE;
-        case HashAlgorithm::SHA512:   return SHA512_DIGEST_SIZE;
-        case HashAlgorithm::SHA3_256: return SHA3_256_DIGEST_SIZE;
-        case HashAlgorithm::SHA3_512: return SHA3_512_DIGEST_SIZE;
-        case HashAlgorithm::BLAKE2b:  return BLAKE2B_DIGEST_SIZE;
-        case HashAlgorithm::BLAKE3:   return BLAKE3_DIGEST_SIZE;
-        default:                      return 0;
-    }
-}
 
 // Hash context for incremental hashing
 class HashContext {

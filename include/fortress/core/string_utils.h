@@ -8,6 +8,7 @@
 #include <optional>
 #include <cctype>
 #include <algorithm>
+#include <cstdint>
 
 namespace fortress {
 
@@ -99,8 +100,8 @@ inline std::string to_hex(std::string_view data, bool uppercase = false) {
     const char* table = uppercase ? upper : lower;
     std::string result;
     result.reserve(data.size() * 2);
-    for (unsigned char c : data) {
-        uint8_t byte = static_cast<uint8_t>(c);
+    for (size_t i = 0; i < data.size(); ++i) {
+        uint8_t byte = static_cast<uint8_t>(static_cast<unsigned char>(data[i]));
         result.push_back(table[byte >> 4]);
         result.push_back(table[byte & 0xF]);
     }
