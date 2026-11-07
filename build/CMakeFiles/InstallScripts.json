@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/Spek/Documents/Projeto Padr\u00e3o/fortress/build/cmake_install.cmake",
+		"C:/Users/Spek/Documents/Projeto Padr\u00e3o/fortress/build/src/core/cmake_install.cmake",
+		"C:/Users/Spek/Documents/Projeto Padr\u00e3o/fortress/build/src/binary/cmake_install.cmake",
+		"C:/Users/Spek/Documents/Projeto Padr\u00e3o/fortress/build/src/cli/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
