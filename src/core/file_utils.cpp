@@ -56,7 +56,10 @@ FileMapping& FileMapping::operator=(FileMapping&& other) noexcept {
         this->~FileMapping();
         data_ = other.data_;
         size_ = other.size_;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
         path_ = std::move(other.path_);
+#pragma GCC diagnostic pop
 #ifdef _WIN32
         mapping_handle_ = other.mapping_handle_;
         file_handle_ = other.file_handle_;

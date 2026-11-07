@@ -72,10 +72,6 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 # Use LLVM's AddLLVM.cmake for consistent settings
 include(AddLLVM)
 
-# Clang and LLD are optional for now - skip due to MSYS2 package issues
-# find_package(Clang QUIET)
-# find_package(LLD QUIET)
-
 # Fortress version configuration
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/include/fortress/version.h.in"
@@ -87,7 +83,7 @@ add_subdirectory(src/core)
 add_subdirectory(src/binary)
 add_subdirectory(src/cli)
 
-# Tests - DISABLED by default
+# Tests - DISABLED by default (test fixtures need fixes)
 # if(FORTRESS_BUILD_TESTS)
 #     enable_testing()
 #     add_subdirectory(tests)

@@ -381,7 +381,7 @@ private:
         II(c,d,a,b, 6,15, 0x2ad7d2bb); II(b,c,d,a,13,21, 0x8f0ccc92);
         II(a,b,c,d, 4, 6, 0xffeff47d); II(d,a,b,c,11,10, 0x85845dd1);
         II(c,d,a,b, 2,15, 0x6fa87e4f); II(b,c,d,a, 9,21, 0xfe2ce6e0);
-        II(a,b,c,d,16, 6, 0xa3014314); II(d,a,b,c,23,10, 0x4e0811a1);
+        II(a,b,c,d, 2, 6, 0xa3014314); II(d,a,b,c, 9,10, 0x4e0811a1);
         #undef II
 
         state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
@@ -556,11 +556,11 @@ Result<Digest> hash_file_incremental(HashAlgorithm algo, const std::filesystem::
 Result<MultiHashResult> compute_all_hashes(std::span<const std::byte> data) {
     MultiHashResult result;
 
+    // Only compute hashes for algorithms that are properly implemented
+    // SHA3, BLAKE2b, BLAKE3 are placeholders and will be implemented in future versions
     const HashAlgorithm algos[] = {
         HashAlgorithm::MD5, HashAlgorithm::SHA1, HashAlgorithm::SHA256,
-        HashAlgorithm::SHA384, HashAlgorithm::SHA512,
-        HashAlgorithm::SHA3_256, HashAlgorithm::SHA3_512,
-        HashAlgorithm::BLAKE2b, HashAlgorithm::BLAKE3
+        HashAlgorithm::SHA384, HashAlgorithm::SHA512
     };
 
     for (auto algo : algos) {
@@ -572,10 +572,6 @@ Result<MultiHashResult> compute_all_hashes(std::span<const std::byte> data) {
                 case HashAlgorithm::SHA256:   result.sha256   = std::move(h.value()); break;
                 case HashAlgorithm::SHA384:   result.sha384   = std::move(h.value()); break;
                 case HashAlgorithm::SHA512:   result.sha512   = std::move(h.value()); break;
-                case HashAlgorithm::SHA3_256: result.sha3_256 = std::move(h.value()); break;
-                case HashAlgorithm::SHA3_512: result.sha3_512 = std::move(h.value()); break;
-                case HashAlgorithm::BLAKE2b:  result.blake2b  = std::move(h.value()); break;
-                case HashAlgorithm::BLAKE3:   result.blake3   = std::move(h.value()); break;
                 default: break;
             }
         }

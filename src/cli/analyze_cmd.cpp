@@ -318,7 +318,7 @@ static nlohmann::json to_json(const BinaryAnalysisResult& result) {
         s["virtual_address"] = format_address(sec.virtual_address);
         s["virtual_size"] = sec.virtual_size;
         s["raw_size"] = sec.raw_size;
-        s["file_offset"] = sec.file_offset == INVALID_OFFSET ? nlohmann::json() : nlohmann::json(sec.file_offset);
+        s["file_offset"] = sec.file_offset == INVALID_OFFSET ? nlohmann::json(nullptr) : nlohmann::json(sec.file_offset);
         s["permissions"] = {
             {"read", sec.is_readable()},
             {"write", sec.is_writable()},
@@ -375,11 +375,11 @@ static nlohmann::json to_json(const BinaryAnalysisResult& result) {
         j["functions"].push_back(fn_json);
     }
     j["hashes"] = {
-        {"md5", result.hashes.md5 ? result.hashes.md5->to_hex() : nullptr},
-        {"sha1", result.hashes.sha1 ? result.hashes.sha1->to_hex() : nullptr},
-        {"sha256", result.hashes.sha256 ? result.hashes.sha256->to_hex() : nullptr},
-        {"sha512", result.hashes.sha512 ? result.hashes.sha512->to_hex() : nullptr},
-        {"blake3", result.hashes.blake3 ? result.hashes.blake3->to_hex() : nullptr}
+        {"md5", result.hashes.md5.has_value() ? nlohmann::json(result.hashes.md5->to_hex()) : nlohmann::json()},
+        {"sha1", result.hashes.sha1.has_value() ? nlohmann::json(result.hashes.sha1->to_hex()) : nlohmann::json()},
+        {"sha256", result.hashes.sha256.has_value() ? nlohmann::json(result.hashes.sha256->to_hex()) : nlohmann::json()},
+        {"sha512", result.hashes.sha512.has_value() ? nlohmann::json(result.hashes.sha512->to_hex()) : nlohmann::json()},
+        {"blake3", result.hashes.blake3.has_value() ? nlohmann::json(result.hashes.blake3->to_hex()) : nlohmann::json()}
     };
     j["analysis_duration_ms"] = result.analysis_duration.count();
     j["warnings"] = result.warnings;
