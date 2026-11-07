@@ -15,7 +15,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 
 **DO NOT** create a public GitHub issue for security vulnerabilities.
 
-Instead, email us at: **security@fortress-project.org** (or create a private GitHub Security Advisory)
+Instead, email us at: **SpekF@proton.me** (or create a private GitHub Security Advisory)
 
 Include the following information:
 - Description of the vulnerability
@@ -105,7 +105,7 @@ Vulnerabilities in dependencies are tracked via:
 
 ## Security Contacts
 
-- **Primary**: security@fortress-project.org
+- **Primary**: SpekF@proton.me
 - **Backup**: GitHub Security Advisories
 
 ## Hall of Fame
