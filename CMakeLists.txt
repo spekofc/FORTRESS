@@ -33,15 +33,13 @@ if(FORTRESS_ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_link_options(-fsanitize=address,undefined)
 endif()
 
-# Warning flags - less strict for system headers
+# Warning flags
 if(MSVC)
     add_compile_options(/W4 /WX /permissive- /std:c++20)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2)
     # Suppress system header warnings and third-party issues
-    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-template-body -Wno-double-promotion)
-    # Targeted suppressions for third-party code (googletest/gmock)
-    add_compile_options(-Wno-sign-conversion -Wno-conversion -Wno-sign-compare)
+    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-template-body -Wno-double-promotion -Wno-sign-conversion)
 endif()
 
 # Enable C for LLVM's internal checks

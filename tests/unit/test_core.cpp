@@ -57,7 +57,8 @@ TEST(CoreError, Basic) {
 TEST(CoreError, Context) {
     Error err = Error::file_not_found("test.bin").with_context("loading config");
     EXPECT_TRUE(err.has_context());
-    EXPECT_TRUE(err.context().find("test.bin") != std::string::npos);
+    // "test.bin" is in the message, "loading config" is in the context
+    EXPECT_TRUE(err.message().find("test.bin") != std::string::npos);
     EXPECT_TRUE(err.context().find("loading config") != std::string::npos);
 }
 
@@ -219,10 +220,12 @@ TEST(CoreHash, UnsupportedAlgorithms) {
     // SHA3-256 should be available in OpenSSL 3.0+
     auto sha3_256_result = create_hash_context(HashAlgorithm::SHA3_256);
     if (sha3_256_result) {
-        // If available, test it works
+        // If available, test it works with reference vector
         auto result = hash_data(HashAlgorithm::SHA3_256, {reinterpret_cast<const std::byte*>("hello world"), 11});
         ASSERT_TRUE(result);
         EXPECT_EQ(result.value().size(), 32);
+        // SHA3-256("hello world") = 644bcc7e564373040999aac89e7622f3ca71fba1d972fd94a31c3bfbf24e3938
+        EXPECT_EQ(result.value().to_hex(), "644bcc7e564373040999aac89e7622f3ca71fba1d972fd94a31c3bfbf24e3938");
     } else {
         // If not available, should return proper error
         EXPECT_EQ(sha3_256_result.error().code(), ErrorCode::UnsupportedOperation);
@@ -234,6 +237,8 @@ TEST(CoreHash, UnsupportedAlgorithms) {
         auto result = hash_data(HashAlgorithm::SHA3_512, {reinterpret_cast<const std::byte*>("hello world"), 11});
         ASSERT_TRUE(result);
         EXPECT_EQ(result.value().size(), 64);
+        // SHA3-512("hello world") = 840006653e9ac9e95117a15c915caab81662918e925de9e004f774ff82d7079a40d4d27b1b372657c61d46d470304c88c788b3a4527ad074d1dccbee5dbaa99a
+        EXPECT_EQ(result.value().to_hex(), "840006653e9ac9e95117a15c915caab81662918e925de9e004f774ff82d7079a40d4d27b1b372657c61d46d470304c88c788b3a4527ad074d1dccbee5dbaa99a");
     } else {
         EXPECT_EQ(sha3_512_result.error().code(), ErrorCode::UnsupportedOperation);
     }
@@ -244,6 +249,8 @@ TEST(CoreHash, UnsupportedAlgorithms) {
         auto result = hash_data(HashAlgorithm::BLAKE2b, {reinterpret_cast<const std::byte*>("hello world"), 11});
         ASSERT_TRUE(result);
         EXPECT_EQ(result.value().size(), 64);
+        // BLAKE2b("hello world") = 021ced8799296ceca557832ab941a50b4a11f83478cf141f51f933f653ab9fbcc05a037cddbed06e309bf334942c4e58cdf1a46e237911ccd7fcf9787cbc7fd0
+        EXPECT_EQ(result.value().to_hex(), "021ced8799296ceca557832ab941a50b4a11f83478cf141f51f933f653ab9fbcc05a037cddbed06e309bf334942c4e58cdf1a46e237911ccd7fcf9787cbc7fd0");
     } else {
         EXPECT_EQ(blake2b_result.error().code(), ErrorCode::UnsupportedOperation);
     }
@@ -285,16 +292,22 @@ TEST(CoreHash, CRC32) {
 }
 
 TEST(CoreHash, CRC32C) {
-    // Test CRC32C (Castagnoli)
+    // Canonical test vector: CRC-32C (Castagnoli) of "123456789" = 0xE3069283
+    std::string data1 = "123456789";
+    uint32_t crc1 = crc32c({reinterpret_cast<const std::byte*>(data1.data()), data1.size()});
+    EXPECT_EQ(crc1, 0xE3069283);
+
+    // CRC-32C (Castagnoli) of "hello world" = 0xC99465AA
     std::string data = "hello world";
-    uint32_t crc = crc32c({reinterpret_cast<const std::byte*>(data.data()), data.size()});
-    EXPECT_NE(crc, 0);
+    uint32_t crc2 = crc32c({reinterpret_cast<const std::byte*>(data.data()), data.size()});
+    EXPECT_EQ(crc2, 0xC99465AA);
 }
 
 TEST(CoreHash, XXH64) {
     std::string data = "hello world";
     uint64_t hash = xxh64({reinterpret_cast<const std::byte*>(data.data()), data.size()}, 0);
-    EXPECT_NE(hash, 0);
+    // Reference: xxHash64("hello world", seed=0) = 0xbb75740c8181914a
+    EXPECT_EQ(hash, 0xbb75740c8181914aULL);
 }
 
 TEST(CoreFileUtils, Path) {
