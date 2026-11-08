@@ -7,7 +7,7 @@
 using namespace fortress;
 
 static std::vector<std::byte> create_minimal_elf64() {
-    std::vector<std::byte> data(1024, std::byte{0});
+    std::vector<std::byte> data(0x5000, std::byte{0});
     auto* ptr = data.data();
 
     // ELF Header
@@ -103,7 +103,7 @@ static std::vector<std::byte> create_minimal_elf64() {
 }
 
 static std::vector<std::byte> create_minimal_elf32() {
-    std::vector<std::byte> data(1024, std::byte{0});
+    std::vector<std::byte> data(0x5000, std::byte{0});
     auto* ptr = data.data();
 
     // ELF Header

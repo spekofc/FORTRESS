@@ -435,35 +435,34 @@ struct BuildToolVersion {
 
 // Architecture detection
 inline Architecture cputype_to_architecture(uint32_t cputype, uint32_t /*cpusubtype*/) {
-    uint32_t base_type = cputype & ~0x01000000u; // Remove 64-bit flag
-    switch (base_type) {
-        case CPU_TYPE_X86:
-            return Architecture::X86;
+    // Check full cputype first (including 64-bit flag) for exact matches
+    switch (cputype) {
         case CPU_TYPE_X86 | 0x01000000u: // x86_64
             return Architecture::X64;
-        case CPU_TYPE_ARM:
-            return Architecture::ARM32;
         case CPU_TYPE_ARM | 0x01000000u: // arm64
             return Architecture::ARM64;
-        case CPU_TYPE_POWERPC:
-            return Architecture::PPC32;
         case CPU_TYPE_POWERPC64:
             return Architecture::PPC64;
+        case CPU_TYPE_X86:
+            return Architecture::X86;
+        case CPU_TYPE_ARM:
+            return Architecture::ARM32;
+        case CPU_TYPE_POWERPC:
+            return Architecture::PPC32;
         default:
             return Architecture::Unknown;
     }
 }
 
 inline std::string cputype_to_string(uint32_t cputype, uint32_t /*cpusubtype*/) {
-    uint32_t base_type = cputype & ~0x01000000u;
-    switch (base_type) {
-        case CPU_TYPE_X86: return "x86";
+    switch (cputype) {
         case CPU_TYPE_X86 | 0x01000000u: return "x86_64";
-        case CPU_TYPE_ARM: return "arm";
+        case CPU_TYPE_X86: return "x86";
         case CPU_TYPE_ARM | 0x01000000u: return "arm64";
-        case CPU_TYPE_POWERPC: return "ppc";
+        case CPU_TYPE_ARM: return "arm";
         case CPU_TYPE_POWERPC64: return "ppc64";
-        default: return "0x" + to_hex(std::string_view(reinterpret_cast<const char*>(&base_type), 4));
+        case CPU_TYPE_POWERPC: return "ppc";
+        default: return "0x" + to_hex(std::string_view(reinterpret_cast<const char*>(&cputype), 4));
     }
 }
 

@@ -17,7 +17,7 @@ static T read_value(const std::byte* ptr) {
 }
 
 // Byte swap helpers
-[[maybe_unused]] static uint16_t bswap16(uint16_t x) { return (x >> 8) | (x << 8); }
+[[maybe_unused]] static uint16_t bswap16(uint16_t x) { return static_cast<uint16_t>((static_cast<uint16_t>(x) >> 8) | (static_cast<uint16_t>(x) << 8)); }
 [[maybe_unused]] static uint32_t bswap32(uint32_t x) { return (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000) | (x << 24); }
 [[maybe_unused]] static uint64_t bswap64(uint64_t x) { return (x >> 56) | ((x >> 40) & 0xFF00) | ((x >> 24) & 0xFF0000) | ((x >> 8) & 0xFF000000) | ((x << 8) & 0xFF00000000) | ((x << 24) & 0xFF0000000000) | ((x << 40) & 0xFF000000000000) | (x << 56); }
 

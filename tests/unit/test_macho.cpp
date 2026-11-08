@@ -7,7 +7,9 @@
 using namespace fortress;
 
 static std::vector<std::byte> create_minimal_macho64() {
-    std::vector<std::byte> data(4096, std::byte{0});
+    // Need enough space for: header (32) + load commands (~400) + text (0x2000) + data (0x1000) + symtab (0x400) + strtab (0x100)
+    // Total ~ 0x5000 (20KB) to be safe
+    std::vector<std::byte> data(0x6000, std::byte{0});
     auto* ptr = data.data();
 
     // Mach Header 64
@@ -16,8 +18,8 @@ static std::vector<std::byte> create_minimal_macho64() {
     hdr->cputype = macho::CPU_TYPE_X86 | 0x01000000; // x86_64
     hdr->cpusubtype = macho::CPU_SUBTYPE_X86_64_ALL;
     hdr->filetype = macho::MH_EXECUTE;
-    hdr->ncmds = 4;
-    hdr->sizeofcmds = sizeof(macho::SegmentCommand64) + sizeof(macho::Section64) * 2
+    hdr->ncmds = 6;
+    hdr->sizeofcmds = sizeof(macho::SegmentCommand64) * 2 + sizeof(macho::Section64) * 2
                     + sizeof(macho::SymtabCommand)
                     + sizeof(macho::DysymtabCommand)
                     + sizeof(macho::UuidCommand)
@@ -79,7 +81,10 @@ static std::vector<std::byte> create_minimal_macho64() {
     seg_data->nsects = 0;
     seg_data->flags = 0;
 
-    // LC_SYMTAB
+    // LC_SYMTAB - place symtab and strtab after the segments
+    // text: 0x1000-0x3000 (0x2000 bytes)
+    // data: 0x3000-0x4000 (0x1000 bytes)
+    // symtab at 0x4000, strtab at 0x4100
     auto* symtab = reinterpret_cast<macho::SymtabCommand*>(reinterpret_cast<std::byte*>(seg_data) + sizeof(macho::SegmentCommand64));
     symtab->cmd = macho::LC_SYMTAB;
     symtab->cmdsize = sizeof(macho::SymtabCommand);
@@ -112,7 +117,7 @@ static std::vector<std::byte> create_minimal_macho64() {
     main_cmd->entryoff = 0x1000; // Offset from __TEXT base
     main_cmd->stacksize = 0x20000;
 
-    // Symbol table
+    // Symbol table at 0x4000
     auto* symtab_data = reinterpret_cast<macho::Nlist64*>(ptr + 0x4000);
     // Local symbol
     symtab_data[0].n_strx = 0;
@@ -128,7 +133,7 @@ static std::vector<std::byte> create_minimal_macho64() {
     symtab_data[1].n_desc = 0;
     symtab_data[1].n_value = 0x100001000;
 
-    // String table
+    // String table at 0x4100
     auto* strtab = ptr + 0x4100;
     strtab[0] = std::byte{0}; // Empty string for index 0
     std::memcpy(strtab + 1, "_main\0", 6);
