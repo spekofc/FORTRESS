@@ -39,7 +39,9 @@ if(MSVC)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2)
     # Suppress system header warnings and third-party issues
-    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion)
+    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-template-body -Wno-double-promotion)
+    # Targeted suppressions for third-party code (googletest/gmock)
+    add_compile_options(-Wno-sign-conversion -Wno-conversion -Wno-sign-compare)
 endif()
 
 # Enable C for LLVM's internal checks

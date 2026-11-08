@@ -187,10 +187,9 @@ TEST(CoreHash, SHA384) {
     ASSERT_TRUE(result);
     EXPECT_EQ(result.value().size(), 48);
 
-    // TODO: Fix SHA384 implementation to match FIPS 180-4 (legacy provider value)
-    // Expected: dfa1f98db2d541430ddb25df998a809779dd60bcdd23bd3ef518613bf63c37796be9be199472b8fdcac10d98192571f9
-    // Current implementation produces:
-    EXPECT_EQ(result.value().to_hex(), "881bf7e64a0a943620693a5ae744a5b37e9fcfd7b85a4682d56756ba683491a5a35688aea9bf2798c82d1adcf57d8386");
+    // Known test vector: SHA384("hello world") from OpenSSL default provider (FIPS 180-4 compliant)
+    // SHA384("hello world") = fdbd8e75a67f29f701a4e040385e2e23986303ea10239211af907fcbb83578b3e417cb71ce646efd0819dd8c088de1bd
+    EXPECT_EQ(result.value().to_hex(), "fdbd8e75a67f29f701a4e040385e2e23986303ea10239211af907fcbb83578b3e417cb71ce646efd0819dd8c088de1bd");
 }
 
 TEST(CoreHash, SHA512) {
@@ -199,10 +198,9 @@ TEST(CoreHash, SHA512) {
     ASSERT_TRUE(result);
     EXPECT_EQ(result.value().size(), 64);
 
-    // TODO: Fix SHA512 implementation to match FIPS 180-4 (legacy provider value)
-    // Expected: b05514701df67fb4b61cc950f6697daef2b247dad3b8f0d735fe42671868b8690180354f6f896d51c5d38ccce6d86cb37a8bb56d1d6e091878d871ca03db465b
-    // Current implementation produces:
-    EXPECT_EQ(result.value().to_hex(), "307a381f3be6c06386959399cb4d2136514e5e5f70c2636df5913ca5ed2f3b5263f571f0334dc3140ceca4af442810d9251428fa90d4e577d00fe1f33ca57af4");
+    // Known test vector: SHA512("hello world") from OpenSSL default provider (FIPS 180-4 compliant)
+    // SHA512("hello world") = 309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f
+    EXPECT_EQ(result.value().to_hex(), "309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f");
 }
 
 TEST(CoreHash, MultiHash) {
@@ -217,6 +215,45 @@ TEST(CoreHash, MultiHash) {
     EXPECT_TRUE(result.value().sha512.has_value());
 }
 
+TEST(CoreHash, UnsupportedAlgorithms) {
+    // SHA3-256 should be available in OpenSSL 3.0+
+    auto sha3_256_result = create_hash_context(HashAlgorithm::SHA3_256);
+    if (sha3_256_result) {
+        // If available, test it works
+        auto result = hash_data(HashAlgorithm::SHA3_256, {reinterpret_cast<const std::byte*>("hello world"), 11});
+        ASSERT_TRUE(result);
+        EXPECT_EQ(result.value().size(), 32);
+    } else {
+        // If not available, should return proper error
+        EXPECT_EQ(sha3_256_result.error().code(), ErrorCode::UnsupportedOperation);
+    }
+
+    // SHA3-512
+    auto sha3_512_result = create_hash_context(HashAlgorithm::SHA3_512);
+    if (sha3_512_result) {
+        auto result = hash_data(HashAlgorithm::SHA3_512, {reinterpret_cast<const std::byte*>("hello world"), 11});
+        ASSERT_TRUE(result);
+        EXPECT_EQ(result.value().size(), 64);
+    } else {
+        EXPECT_EQ(sha3_512_result.error().code(), ErrorCode::UnsupportedOperation);
+    }
+
+    // BLAKE2b
+    auto blake2b_result = create_hash_context(HashAlgorithm::BLAKE2b);
+    if (blake2b_result) {
+        auto result = hash_data(HashAlgorithm::BLAKE2b, {reinterpret_cast<const std::byte*>("hello world"), 11});
+        ASSERT_TRUE(result);
+        EXPECT_EQ(result.value().size(), 64);
+    } else {
+        EXPECT_EQ(blake2b_result.error().code(), ErrorCode::UnsupportedOperation);
+    }
+
+    // BLAKE3 - should not be available
+    auto blake3_result = create_hash_context(HashAlgorithm::BLAKE3);
+    EXPECT_FALSE(blake3_result);
+    EXPECT_EQ(blake3_result.error().code(), ErrorCode::UnsupportedOperation);
+}
+
 TEST(CoreHash, Entropy) {
     // Low entropy - all same byte
     std::vector<std::byte> low(100, std::byte{0x00});
@@ -225,7 +262,7 @@ TEST(CoreHash, Entropy) {
 
     // High entropy - random-ish
     std::vector<std::byte> high(256);
-    for (int i = 0; i < 256; ++i) high[i] = static_cast<std::byte>(i);
+    for (size_t i = 0; i < 256; ++i) high[i] = static_cast<std::byte>(i);
     double high_ent = calculate_entropy(high);
     EXPECT_NEAR(high_ent, 8.0, 0.1);
 
