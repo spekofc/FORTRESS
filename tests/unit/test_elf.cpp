@@ -2,6 +2,7 @@
 
 #include <fortress/binary/formats/elf/elf_parser.h>
 #include <gtest/gtest.h>
+#include <cstring>
 
 using namespace fortress;
 
@@ -231,7 +232,7 @@ TEST(ELFParser, WrongClass) {
     data[1] = std::byte{'E'};
     data[2] = std::byte{'L'};
     data[3] = std::byte{'F'};
-    data[4] = 99; // Invalid class
+    data[4] = std::byte{99}; // Invalid class
 
     elf::ELFParser parser;
     auto result = parser.parse(data);
@@ -245,8 +246,8 @@ TEST(ELFParser, BigEndian) {
     data[1] = std::byte{'E'};
     data[2] = std::byte{'L'};
     data[3] = std::byte{'F'};
-    data[4] = elf::ELFCLASS64;
-    data[5] = elf::ELFDATA2MSB; // Big endian
+    data[4] = std::byte{elf::ELFCLASS64};
+    data[5] = std::byte{elf::ELFDATA2MSB}; // Big endian
 
     elf::ELFParser parser;
     auto result = parser.parse(data);
@@ -282,9 +283,4 @@ TEST(ELFParser, SectionPermissions) {
     }
     EXPECT_TRUE(found_text);
     EXPECT_TRUE(found_data);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }

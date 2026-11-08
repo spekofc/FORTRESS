@@ -96,6 +96,18 @@ build package_source: phony CMakeFiles/package_source.util
 
 
 #############################################
+# Utility command for test
+
+build CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build test: phony CMakeFiles/test.util
+
+
+#############################################
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
@@ -175,9 +187,8 @@ build cmake_object_order_depends_target_fortress_core: phony || .
 
 build src/core/CMakeFiles/fortress_core.dir/error.cpp.obj: CXX_COMPILER__fortress_core_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/error.cpp || cmake_object_order_depends_target_fortress_core
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\core\CMakeFiles\fortress_core.dir\error.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\core\CMakeFiles\fortress_core.dir
   OBJECT_FILE_DIR = src\core\CMakeFiles\fortress_core.dir
@@ -185,9 +196,8 @@ build src/core/CMakeFiles/fortress_core.dir/error.cpp.obj: CXX_COMPILER__fortres
 
 build src/core/CMakeFiles/fortress_core.dir/file_utils.cpp.obj: CXX_COMPILER__fortress_core_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/file_utils.cpp || cmake_object_order_depends_target_fortress_core
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\core\CMakeFiles\fortress_core.dir\file_utils.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\core\CMakeFiles\fortress_core.dir
   OBJECT_FILE_DIR = src\core\CMakeFiles\fortress_core.dir
@@ -195,9 +205,8 @@ build src/core/CMakeFiles/fortress_core.dir/file_utils.cpp.obj: CXX_COMPILER__fo
 
 build src/core/CMakeFiles/fortress_core.dir/hash.cpp.obj: CXX_COMPILER__fortress_core_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/hash.cpp || cmake_object_order_depends_target_fortress_core
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\core\CMakeFiles\fortress_core.dir\hash.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\core\CMakeFiles\fortress_core.dir
   OBJECT_FILE_DIR = src\core\CMakeFiles\fortress_core.dir
@@ -244,6 +253,18 @@ build src/core/CMakeFiles/package_source.util: CUSTOM_COMMAND
   restat = 1
 
 build src/core/package_source: phony src/core/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build src/core/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\src\core" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build src/core/test: phony src/core/CMakeFiles/test.util
 
 
 #############################################
@@ -326,9 +347,8 @@ build cmake_object_order_depends_target_fortress_binary: phony || cmake_object_o
 
 build src/binary/CMakeFiles/fortress_binary.dir/analysis/analyzer.cpp.obj: CXX_COMPILER__fortress_binary_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/analysis/analyzer.cpp || cmake_object_order_depends_target_fortress_binary
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\binary\CMakeFiles\fortress_binary.dir\analysis\analyzer.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\binary\CMakeFiles\fortress_binary.dir
   OBJECT_FILE_DIR = src\binary\CMakeFiles\fortress_binary.dir\analysis
@@ -336,9 +356,8 @@ build src/binary/CMakeFiles/fortress_binary.dir/analysis/analyzer.cpp.obj: CXX_C
 
 build src/binary/CMakeFiles/fortress_binary.dir/formats/pe/pe_parser.cpp.obj: CXX_COMPILER__fortress_binary_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/formats/pe/pe_parser.cpp || cmake_object_order_depends_target_fortress_binary
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\binary\CMakeFiles\fortress_binary.dir\formats\pe\pe_parser.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\binary\CMakeFiles\fortress_binary.dir
   OBJECT_FILE_DIR = src\binary\CMakeFiles\fortress_binary.dir\formats\pe
@@ -346,9 +365,8 @@ build src/binary/CMakeFiles/fortress_binary.dir/formats/pe/pe_parser.cpp.obj: CX
 
 build src/binary/CMakeFiles/fortress_binary.dir/formats/elf/elf_parser.cpp.obj: CXX_COMPILER__fortress_binary_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/formats/elf/elf_parser.cpp || cmake_object_order_depends_target_fortress_binary
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\binary\CMakeFiles\fortress_binary.dir\formats\elf\elf_parser.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\binary\CMakeFiles\fortress_binary.dir
   OBJECT_FILE_DIR = src\binary\CMakeFiles\fortress_binary.dir\formats\elf
@@ -356,9 +374,8 @@ build src/binary/CMakeFiles/fortress_binary.dir/formats/elf/elf_parser.cpp.obj: 
 
 build src/binary/CMakeFiles/fortress_binary.dir/formats/macho/macho_parser.cpp.obj: CXX_COMPILER__fortress_binary_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/formats/macho/macho_parser.cpp || cmake_object_order_depends_target_fortress_binary
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\binary\CMakeFiles\fortress_binary.dir\formats\macho\macho_parser.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
   INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include"
   OBJECT_DIR = src\binary\CMakeFiles\fortress_binary.dir
   OBJECT_FILE_DIR = src\binary\CMakeFiles\fortress_binary.dir\formats\macho
@@ -405,6 +422,18 @@ build src/binary/CMakeFiles/package_source.util: CUSTOM_COMMAND
   restat = 1
 
 build src/binary/package_source: phony src/binary/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build src/binary/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\src\binary" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build src/binary/test: phony src/binary/CMakeFiles/test.util
 
 
 #############################################
@@ -487,30 +516,27 @@ build cmake_object_order_depends_target_fortress: phony || cmake_object_order_de
 
 build src/cli/CMakeFiles/fortress.dir/main.cpp.obj: CXX_COMPILER__fortress_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/main.cpp || cmake_object_order_depends_target_fortress
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\cli\CMakeFiles\fortress.dir\main.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
-  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
   OBJECT_DIR = src\cli\CMakeFiles\fortress.dir
   OBJECT_FILE_DIR = src\cli\CMakeFiles\fortress.dir
   TARGET_SUPPORT_DIR = src\cli\CMakeFiles\fortress.dir
 
 build src/cli/CMakeFiles/fortress.dir/analyze_cmd.cpp.obj: CXX_COMPILER__fortress_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/analyze_cmd.cpp || cmake_object_order_depends_target_fortress
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\cli\CMakeFiles\fortress.dir\analyze_cmd.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
-  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
   OBJECT_DIR = src\cli\CMakeFiles\fortress.dir
   OBJECT_FILE_DIR = src\cli\CMakeFiles\fortress.dir
   TARGET_SUPPORT_DIR = src\cli\CMakeFiles\fortress.dir
 
 build src/cli/CMakeFiles/fortress.dir/output.cpp.obj: CXX_COMPILER__fortress_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/output.cpp || cmake_object_order_depends_target_fortress
   CONFIG = Debug
-  DEFINES = -D_GLIBCXX_USE_CXX11_ABI="1 -D_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   DEP_FILE = src\cli\CMakeFiles\fortress.dir\output.cpp.obj.d
-  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2
-  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/cli/../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include"
   OBJECT_DIR = src\cli\CMakeFiles\fortress.dir
   OBJECT_FILE_DIR = src\cli\CMakeFiles\fortress.dir
   TARGET_SUPPORT_DIR = src\cli\CMakeFiles\fortress.dir
@@ -523,10 +549,10 @@ build src/cli/CMakeFiles/fortress.dir/output.cpp.obj: CXX_COMPILER__fortress_uns
 #############################################
 # Link the executable src\cli\fortress.exe
 
-build src/cli/fortress.exe: CXX_EXECUTABLE_LINKER__fortress_Debug src/cli/CMakeFiles/fortress.dir/main.cpp.obj src/cli/CMakeFiles/fortress.dir/analyze_cmd.cpp.obj src/cli/CMakeFiles/fortress.dir/output.cpp.obj | src/core/libfortress_core.a src/binary/libfortress_binary.a C$:/msys64/ucrt64/lib/libLLVMSupport.a src/core/libfortress_core.a C$:/msys64/ucrt64/lib/libLLVMObject.a C$:/msys64/ucrt64/lib/libLLVMIRReader.a C$:/msys64/ucrt64/lib/libLLVMBitReader.a C$:/msys64/ucrt64/lib/libLLVMAsmParser.a C$:/msys64/ucrt64/lib/libLLVMCore.a C$:/msys64/ucrt64/lib/libLLVMRemarks.a C$:/msys64/ucrt64/lib/libLLVMBitstreamReader.a C$:/msys64/ucrt64/lib/libLLVMTextAPI.a C$:/msys64/ucrt64/lib/libLLVMMCParser.a C$:/msys64/ucrt64/lib/libLLVMMCDisassembler.a C$:/msys64/ucrt64/lib/libLLVMMC.a C$:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a C$:/msys64/ucrt64/lib/libLLVMBinaryFormat.a C$:/msys64/ucrt64/lib/libLLVMTargetParser.a C$:/msys64/ucrt64/lib/libLLVMSupport.a C$:/msys64/ucrt64/lib/libLLVMDemangle.a C$:/msys64/ucrt64/lib/libz.dll.a C$:/msys64/ucrt64/lib/libzstd.dll.a || src/binary/libfortress_binary.a src/core/libfortress_core.a
+build src/cli/fortress.exe: CXX_EXECUTABLE_LINKER__fortress_Debug src/cli/CMakeFiles/fortress.dir/main.cpp.obj src/cli/CMakeFiles/fortress.dir/analyze_cmd.cpp.obj src/cli/CMakeFiles/fortress.dir/output.cpp.obj | src/core/libfortress_core.a src/binary/libfortress_binary.a C$:/msys64/ucrt64/lib/libLLVMSupport.a src/core/libfortress_core.a C$:/msys64/ucrt64/lib/libssl.dll.a C$:/msys64/ucrt64/lib/libcrypto.dll.a C$:/msys64/ucrt64/lib/libLLVMObject.a C$:/msys64/ucrt64/lib/libLLVMIRReader.a C$:/msys64/ucrt64/lib/libLLVMBitReader.a C$:/msys64/ucrt64/lib/libLLVMAsmParser.a C$:/msys64/ucrt64/lib/libLLVMCore.a C$:/msys64/ucrt64/lib/libLLVMRemarks.a C$:/msys64/ucrt64/lib/libLLVMBitstreamReader.a C$:/msys64/ucrt64/lib/libLLVMTextAPI.a C$:/msys64/ucrt64/lib/libLLVMMCParser.a C$:/msys64/ucrt64/lib/libLLVMMCDisassembler.a C$:/msys64/ucrt64/lib/libLLVMMC.a C$:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a C$:/msys64/ucrt64/lib/libLLVMBinaryFormat.a C$:/msys64/ucrt64/lib/libLLVMTargetParser.a C$:/msys64/ucrt64/lib/libLLVMSupport.a C$:/msys64/ucrt64/lib/libLLVMDemangle.a C$:/msys64/ucrt64/lib/libz.dll.a C$:/msys64/ucrt64/lib/libzstd.dll.a || src/binary/libfortress_binary.a src/core/libfortress_core.a
   CONFIG = Debug
   FLAGS = -g
-  LINK_LIBRARIES = src/core/libfortress_core.a  src/binary/libfortress_binary.a  C:/msys64/ucrt64/lib/libLLVMSupport.a  src/core/libfortress_core.a  C:/msys64/ucrt64/lib/libLLVMObject.a  C:/msys64/ucrt64/lib/libLLVMIRReader.a  C:/msys64/ucrt64/lib/libLLVMBitReader.a  C:/msys64/ucrt64/lib/libLLVMAsmParser.a  C:/msys64/ucrt64/lib/libLLVMCore.a  C:/msys64/ucrt64/lib/libLLVMRemarks.a  C:/msys64/ucrt64/lib/libLLVMBitstreamReader.a  C:/msys64/ucrt64/lib/libLLVMTextAPI.a  C:/msys64/ucrt64/lib/libLLVMMCParser.a  C:/msys64/ucrt64/lib/libLLVMMCDisassembler.a  C:/msys64/ucrt64/lib/libLLVMMC.a  C:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a  C:/msys64/ucrt64/lib/libLLVMBinaryFormat.a  C:/msys64/ucrt64/lib/libLLVMTargetParser.a  C:/msys64/ucrt64/lib/libLLVMSupport.a  C:/msys64/ucrt64/lib/libLLVMDemangle.a  -lpsapi  -lshell32  -lole32  -luuid  -ladvapi32  -lws2_32  -lntdll  -lpthread  C:/msys64/ucrt64/lib/libz.dll.a  C:/msys64/ucrt64/lib/libzstd.dll.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+  LINK_LIBRARIES = src/core/libfortress_core.a  src/binary/libfortress_binary.a  C:/msys64/ucrt64/lib/libLLVMSupport.a  src/core/libfortress_core.a  C:/msys64/ucrt64/lib/libssl.dll.a  C:/msys64/ucrt64/lib/libcrypto.dll.a  C:/msys64/ucrt64/lib/libLLVMObject.a  C:/msys64/ucrt64/lib/libLLVMIRReader.a  C:/msys64/ucrt64/lib/libLLVMBitReader.a  C:/msys64/ucrt64/lib/libLLVMAsmParser.a  C:/msys64/ucrt64/lib/libLLVMCore.a  C:/msys64/ucrt64/lib/libLLVMRemarks.a  C:/msys64/ucrt64/lib/libLLVMBitstreamReader.a  C:/msys64/ucrt64/lib/libLLVMTextAPI.a  C:/msys64/ucrt64/lib/libLLVMMCParser.a  C:/msys64/ucrt64/lib/libLLVMMCDisassembler.a  C:/msys64/ucrt64/lib/libLLVMMC.a  C:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a  C:/msys64/ucrt64/lib/libLLVMBinaryFormat.a  C:/msys64/ucrt64/lib/libLLVMTargetParser.a  C:/msys64/ucrt64/lib/libLLVMSupport.a  C:/msys64/ucrt64/lib/libLLVMDemangle.a  -lpsapi  -lshell32  -lole32  -luuid  -ladvapi32  -lws2_32  -lntdll  -lpthread  C:/msys64/ucrt64/lib/libz.dll.a  C:/msys64/ucrt64/lib/libzstd.dll.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = src\cli\CMakeFiles\fortress.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
@@ -558,6 +584,18 @@ build src/cli/CMakeFiles/package_source.util: CUSTOM_COMMAND
   restat = 1
 
 build src/cli/package_source: phony src/cli/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build src/cli/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\src\cli" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build src/cli/test: phony src/cli/CMakeFiles/test.util
 
 
 #############################################
@@ -625,6 +663,662 @@ build src/cli/CMakeFiles/install/strip.util: CUSTOM_COMMAND src/cli/all
 build src/cli/install/strip: phony src/cli/CMakeFiles/install/strip.util
 
 # =============================================================================
+# Write statements declared in CMakeLists.txt:
+# C:/Users/Spek/Documents/Projeto Padrão/fortress/CMakeLists.txt
+# =============================================================================
+
+
+#############################################
+# Utility command for generate_fixtures
+
+build tests/generate_fixtures: phony tests/CMakeFiles/generate_fixtures
+
+# =============================================================================
+# Object build statements for EXECUTABLE target fortress_tests
+
+
+#############################################
+# Order-only phony target for fortress_tests
+
+build cmake_object_order_depends_target_fortress_tests: phony || cmake_object_order_depends_target_fortress_binary cmake_object_order_depends_target_fortress_core cmake_object_order_depends_target_gtest cmake_object_order_depends_target_gtest_main
+
+build tests/CMakeFiles/fortress_tests.dir/unit/test_core.cpp.obj: CXX_COMPILER__fortress_tests_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/unit/test_core.cpp || cmake_object_order_depends_target_fortress_tests
+  CONFIG = Debug
+  DEP_FILE = tests\CMakeFiles\fortress_tests.dir\unit\test_core.cpp.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\fortress_tests.dir\unit
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+build tests/CMakeFiles/fortress_tests.dir/unit/test_binary.cpp.obj: CXX_COMPILER__fortress_tests_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/unit/test_binary.cpp || cmake_object_order_depends_target_fortress_tests
+  CONFIG = Debug
+  DEP_FILE = tests\CMakeFiles\fortress_tests.dir\unit\test_binary.cpp.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\fortress_tests.dir\unit
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+build tests/CMakeFiles/fortress_tests.dir/unit/test_pe.cpp.obj: CXX_COMPILER__fortress_tests_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/unit/test_pe.cpp || cmake_object_order_depends_target_fortress_tests
+  CONFIG = Debug
+  DEP_FILE = tests\CMakeFiles\fortress_tests.dir\unit\test_pe.cpp.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\fortress_tests.dir\unit
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+build tests/CMakeFiles/fortress_tests.dir/unit/test_elf.cpp.obj: CXX_COMPILER__fortress_tests_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/unit/test_elf.cpp || cmake_object_order_depends_target_fortress_tests
+  CONFIG = Debug
+  DEP_FILE = tests\CMakeFiles\fortress_tests.dir\unit\test_elf.cpp.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\fortress_tests.dir\unit
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+build tests/CMakeFiles/fortress_tests.dir/unit/test_macho.cpp.obj: CXX_COMPILER__fortress_tests_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/unit/test_macho.cpp || cmake_object_order_depends_target_fortress_tests
+  CONFIG = Debug
+  DEP_FILE = tests\CMakeFiles\fortress_tests.dir\unit\test_macho.cpp.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/core/../../include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/src/binary/../../include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  OBJECT_FILE_DIR = tests\CMakeFiles\fortress_tests.dir\unit
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target fortress_tests
+
+
+#############################################
+# Link the executable tests\fortress_tests.exe
+
+build tests/fortress_tests.exe: CXX_EXECUTABLE_LINKER__fortress_tests_Debug tests/CMakeFiles/fortress_tests.dir/unit/test_core.cpp.obj tests/CMakeFiles/fortress_tests.dir/unit/test_binary.cpp.obj tests/CMakeFiles/fortress_tests.dir/unit/test_pe.cpp.obj tests/CMakeFiles/fortress_tests.dir/unit/test_elf.cpp.obj tests/CMakeFiles/fortress_tests.dir/unit/test_macho.cpp.obj | src/core/libfortress_core.a src/binary/libfortress_binary.a lib/libgtest_main.a src/core/libfortress_core.a C$:/msys64/ucrt64/lib/libssl.dll.a C$:/msys64/ucrt64/lib/libcrypto.dll.a C$:/msys64/ucrt64/lib/libLLVMObject.a C$:/msys64/ucrt64/lib/libLLVMIRReader.a C$:/msys64/ucrt64/lib/libLLVMBitReader.a C$:/msys64/ucrt64/lib/libLLVMAsmParser.a C$:/msys64/ucrt64/lib/libLLVMCore.a C$:/msys64/ucrt64/lib/libLLVMRemarks.a C$:/msys64/ucrt64/lib/libLLVMBitstreamReader.a C$:/msys64/ucrt64/lib/libLLVMTextAPI.a C$:/msys64/ucrt64/lib/libLLVMMCParser.a C$:/msys64/ucrt64/lib/libLLVMMCDisassembler.a C$:/msys64/ucrt64/lib/libLLVMMC.a C$:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a C$:/msys64/ucrt64/lib/libLLVMBinaryFormat.a C$:/msys64/ucrt64/lib/libLLVMTargetParser.a C$:/msys64/ucrt64/lib/libLLVMSupport.a C$:/msys64/ucrt64/lib/libLLVMDemangle.a C$:/msys64/ucrt64/lib/libz.dll.a C$:/msys64/ucrt64/lib/libzstd.dll.a lib/libgtest.a || lib/libgtest.a lib/libgtest_main.a src/binary/libfortress_binary.a src/core/libfortress_core.a
+  CONFIG = Debug
+  FLAGS = -g
+  LINK_LIBRARIES = src/core/libfortress_core.a  src/binary/libfortress_binary.a  lib/libgtest_main.a  src/core/libfortress_core.a  C:/msys64/ucrt64/lib/libssl.dll.a  C:/msys64/ucrt64/lib/libcrypto.dll.a  C:/msys64/ucrt64/lib/libLLVMObject.a  C:/msys64/ucrt64/lib/libLLVMIRReader.a  C:/msys64/ucrt64/lib/libLLVMBitReader.a  C:/msys64/ucrt64/lib/libLLVMAsmParser.a  C:/msys64/ucrt64/lib/libLLVMCore.a  C:/msys64/ucrt64/lib/libLLVMRemarks.a  C:/msys64/ucrt64/lib/libLLVMBitstreamReader.a  C:/msys64/ucrt64/lib/libLLVMTextAPI.a  C:/msys64/ucrt64/lib/libLLVMMCParser.a  C:/msys64/ucrt64/lib/libLLVMMCDisassembler.a  C:/msys64/ucrt64/lib/libLLVMMC.a  C:/msys64/ucrt64/lib/libLLVMDebugInfoDWARFLowLevel.a  C:/msys64/ucrt64/lib/libLLVMBinaryFormat.a  C:/msys64/ucrt64/lib/libLLVMTargetParser.a  C:/msys64/ucrt64/lib/libLLVMSupport.a  C:/msys64/ucrt64/lib/libLLVMDemangle.a  -lpsapi  -lshell32  -lole32  -luuid  -ladvapi32  -lws2_32  -lntdll  -lpthread  C:/msys64/ucrt64/lib/libz.dll.a  C:/msys64/ucrt64/lib/libzstd.dll.a  lib/libgtest.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+  OBJECT_DIR = tests\CMakeFiles\fortress_tests.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = tests\fortress_tests.exe
+  TARGET_IMPLIB = tests\libfortress_tests.dll.a
+  TARGET_PDB = fortress_tests.exe.dbg
+  TARGET_SUPPORT_DIR = tests\CMakeFiles\fortress_tests.dir
+
+
+#############################################
+# Utility command for package
+
+build tests/CMakeFiles/package.util: CUSTOM_COMMAND tests/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackConfig.cmake"
+  DESC = Run CPack packaging tool...
+  pool = console
+  restat = 1
+
+build tests/package: phony tests/CMakeFiles/package.util
+
+
+#############################################
+# Utility command for package_source
+
+build tests/CMakeFiles/package_source.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackSourceConfig.cmake"
+  DESC = Run CPack packaging tool for source...
+  pool = console
+  restat = 1
+
+build tests/package_source: phony tests/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build tests/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build tests/test: phony tests/CMakeFiles/test.util
+
+
+#############################################
+# Utility command for edit_cache
+
+build tests/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build tests/edit_cache: phony tests/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build tests/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe --regenerate-during-build -S"C:\Users\Spek\Documents\Projeto Padrão\fortress" -B"C:\Users\Spek\Documents\Projeto Padrão\fortress\build""
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build tests/rebuild_cache: phony tests/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build tests/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build tests/CMakeFiles/install.util: CUSTOM_COMMAND tests/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe -P cmake_install.cmake"
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build tests/install: phony tests/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build tests/CMakeFiles/install/local.util: CUSTOM_COMMAND tests/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake"
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build tests/install/local: phony tests/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build tests/CMakeFiles/install/strip.util: CUSTOM_COMMAND tests/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake"
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build tests/install/strip: phony tests/CMakeFiles/install/strip.util
+
+
+#############################################
+# Custom command for tests\CMakeFiles\generate_fixtures
+
+build tests/CMakeFiles/generate_fixtures | ${cmake_ninja_workdir}tests/CMakeFiles/generate_fixtures: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\tests" && C:\msys64\ucrt64\bin\cmake.exe -E echo "Fixtures should be pre-built""
+  DESC = Generating test fixtures
+
+# =============================================================================
+# Write statements declared in CMakeLists.txt:
+# C:/Users/Spek/Documents/Projeto Padrão/fortress/tests/CMakeLists.txt
+# =============================================================================
+
+
+#############################################
+# Utility command for package
+
+build _deps/googletest-build/CMakeFiles/package.util: CUSTOM_COMMAND _deps/googletest-build/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackConfig.cmake"
+  DESC = Run CPack packaging tool...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/package: phony _deps/googletest-build/CMakeFiles/package.util
+
+
+#############################################
+# Utility command for package_source
+
+build _deps/googletest-build/CMakeFiles/package_source.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackSourceConfig.cmake"
+  DESC = Run CPack packaging tool for source...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/package_source: phony _deps/googletest-build/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build _deps/googletest-build/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/test: phony _deps/googletest-build/CMakeFiles/test.util
+
+
+#############################################
+# Utility command for edit_cache
+
+build _deps/googletest-build/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build _deps/googletest-build/edit_cache: phony _deps/googletest-build/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build _deps/googletest-build/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\cmake.exe --regenerate-during-build -S"C:\Users\Spek\Documents\Projeto Padrão\fortress" -B"C:\Users\Spek\Documents\Projeto Padrão\fortress\build""
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/rebuild_cache: phony _deps/googletest-build/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build _deps/googletest-build/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build _deps/googletest-build/CMakeFiles/install.util: CUSTOM_COMMAND _deps/googletest-build/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\cmake.exe -P cmake_install.cmake"
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/install: phony _deps/googletest-build/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build _deps/googletest-build/CMakeFiles/install/local.util: CUSTOM_COMMAND _deps/googletest-build/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake"
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/install/local: phony _deps/googletest-build/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build _deps/googletest-build/CMakeFiles/install/strip.util: CUSTOM_COMMAND _deps/googletest-build/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake"
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/install/strip: phony _deps/googletest-build/CMakeFiles/install/strip.util
+
+# =============================================================================
+# Write statements declared in CMakeLists.txt:
+# C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/CMakeLists.txt
+# =============================================================================
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target gmock
+
+
+#############################################
+# Order-only phony target for gmock
+
+build cmake_object_order_depends_target_gmock: phony || cmake_object_order_depends_target_gtest
+
+build _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.obj: CXX_COMPILER__gmock_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-src/googlemock/src/gmock-all.cc || cmake_object_order_depends_target_gmock
+  CONFIG = Debug
+  DEP_FILE = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir\src\gmock-all.cc.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=0 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock/include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir
+  OBJECT_FILE_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir\src
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target gmock
+
+
+#############################################
+# Link the static library lib\libgmock.a
+
+build lib/libgmock.a: CXX_STATIC_LIBRARY_LINKER__gmock_Debug _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.obj || lib/libgtest.a
+  CONFIG = Debug
+  LANGUAGE_COMPILE_FLAGS = -g
+  OBJECT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = lib\libgmock.a
+  TARGET_PDB = gmock.a.dbg
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock.dir
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target gmock_main
+
+
+#############################################
+# Order-only phony target for gmock_main
+
+build cmake_object_order_depends_target_gmock_main: phony || cmake_object_order_depends_target_gmock cmake_object_order_depends_target_gtest
+
+build _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.obj: CXX_COMPILER__gmock_main_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-src/googlemock/src/gmock_main.cc || cmake_object_order_depends_target_gmock_main
+  CONFIG = Debug
+  DEP_FILE = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir\src\gmock_main.cc.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=0 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir
+  OBJECT_FILE_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir\src
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target gmock_main
+
+
+#############################################
+# Link the static library lib\libgmock_main.a
+
+build lib/libgmock_main.a: CXX_STATIC_LIBRARY_LINKER__gmock_main_Debug _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.obj || lib/libgmock.a lib/libgtest.a
+  CONFIG = Debug
+  LANGUAGE_COMPILE_FLAGS = -g
+  OBJECT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = lib\libgmock_main.a
+  TARGET_PDB = gmock_main.a.dbg
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googlemock\CMakeFiles\gmock_main.dir
+
+
+#############################################
+# Utility command for package
+
+build _deps/googletest-build/googlemock/CMakeFiles/package.util: CUSTOM_COMMAND _deps/googletest-build/googlemock/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackConfig.cmake"
+  DESC = Run CPack packaging tool...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/package: phony _deps/googletest-build/googlemock/CMakeFiles/package.util
+
+
+#############################################
+# Utility command for package_source
+
+build _deps/googletest-build/googlemock/CMakeFiles/package_source.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackSourceConfig.cmake"
+  DESC = Run CPack packaging tool for source...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/package_source: phony _deps/googletest-build/googlemock/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build _deps/googletest-build/googlemock/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/test: phony _deps/googletest-build/googlemock/CMakeFiles/test.util
+
+
+#############################################
+# Utility command for edit_cache
+
+build _deps/googletest-build/googlemock/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build _deps/googletest-build/googlemock/edit_cache: phony _deps/googletest-build/googlemock/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build _deps/googletest-build/googlemock/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\cmake.exe --regenerate-during-build -S"C:\Users\Spek\Documents\Projeto Padrão\fortress" -B"C:\Users\Spek\Documents\Projeto Padrão\fortress\build""
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/rebuild_cache: phony _deps/googletest-build/googlemock/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build _deps/googletest-build/googlemock/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build _deps/googletest-build/googlemock/CMakeFiles/install.util: CUSTOM_COMMAND _deps/googletest-build/googlemock/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\cmake.exe -P cmake_install.cmake"
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/install: phony _deps/googletest-build/googlemock/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build _deps/googletest-build/googlemock/CMakeFiles/install/local.util: CUSTOM_COMMAND _deps/googletest-build/googlemock/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake"
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/install/local: phony _deps/googletest-build/googlemock/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build _deps/googletest-build/googlemock/CMakeFiles/install/strip.util: CUSTOM_COMMAND _deps/googletest-build/googlemock/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googlemock" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake"
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googlemock/install/strip: phony _deps/googletest-build/googlemock/CMakeFiles/install/strip.util
+
+# =============================================================================
+# Write statements declared in CMakeLists.txt:
+# C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock/CMakeLists.txt
+# =============================================================================
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target gtest
+
+
+#############################################
+# Order-only phony target for gtest
+
+build cmake_object_order_depends_target_gtest: phony || .
+
+build _deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.obj: CXX_COMPILER__gtest_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-src/googletest/src/gtest-all.cc || cmake_object_order_depends_target_gtest
+  CONFIG = Debug
+  DEP_FILE = _deps\googletest-build\googletest\CMakeFiles\gtest.dir\src\gtest-all.cc.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=0 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -I"C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest.dir
+  OBJECT_FILE_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest.dir\src
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest.dir
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target gtest
+
+
+#############################################
+# Link the static library lib\libgtest.a
+
+build lib/libgtest.a: CXX_STATIC_LIBRARY_LINKER__gtest_Debug _deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.obj
+  CONFIG = Debug
+  LANGUAGE_COMPILE_FLAGS = -g
+  OBJECT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = lib\libgtest.a
+  TARGET_PDB = gtest.a.dbg
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest.dir
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target gtest_main
+
+
+#############################################
+# Order-only phony target for gtest_main
+
+build cmake_object_order_depends_target_gtest_main: phony || cmake_object_order_depends_target_gtest
+
+build _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.obj: CXX_COMPILER__gtest_main_unscanned_Debug C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-src/googletest/src/gtest_main.cc || cmake_object_order_depends_target_gtest_main
+  CONFIG = Debug
+  DEP_FILE = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir\src\gtest_main.cc.obj.d
+  FLAGS = -g -std=c++20 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=0 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2 -Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion
+  INCLUDES = -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest/include" -isystem "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest"
+  OBJECT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir
+  OBJECT_FILE_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir\src
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target gtest_main
+
+
+#############################################
+# Link the static library lib\libgtest_main.a
+
+build lib/libgtest_main.a: CXX_STATIC_LIBRARY_LINKER__gtest_main_Debug _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.obj || lib/libgtest.a
+  CONFIG = Debug
+  LANGUAGE_COMPILE_FLAGS = -g
+  OBJECT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = lib\libgtest_main.a
+  TARGET_PDB = gtest_main.a.dbg
+  TARGET_SUPPORT_DIR = _deps\googletest-build\googletest\CMakeFiles\gtest_main.dir
+
+
+#############################################
+# Utility command for package
+
+build _deps/googletest-build/googletest/CMakeFiles/package.util: CUSTOM_COMMAND _deps/googletest-build/googletest/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackConfig.cmake"
+  DESC = Run CPack packaging tool...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/package: phony _deps/googletest-build/googletest/CMakeFiles/package.util
+
+
+#############################################
+# Utility command for package_source
+
+build _deps/googletest-build/googletest/CMakeFiles/package_source.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build" && C:\msys64\ucrt64\bin\cpack.exe --config ./CPackSourceConfig.cmake"
+  DESC = Run CPack packaging tool for source...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/package_source: phony _deps/googletest-build/googletest/CMakeFiles/package_source.util
+
+
+#############################################
+# Utility command for test
+
+build _deps/googletest-build/googletest/CMakeFiles/test.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\ctest.exe "
+  DESC = Running tests...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/test: phony _deps/googletest-build/googletest/CMakeFiles/test.util
+
+
+#############################################
+# Utility command for edit_cache
+
+build _deps/googletest-build/googletest/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build _deps/googletest-build/googletest/edit_cache: phony _deps/googletest-build/googletest/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build _deps/googletest-build/googletest/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\cmake.exe --regenerate-during-build -S"C:\Users\Spek\Documents\Projeto Padrão\fortress" -B"C:\Users\Spek\Documents\Projeto Padrão\fortress\build""
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/rebuild_cache: phony _deps/googletest-build/googletest/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build _deps/googletest-build/googletest/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build _deps/googletest-build/googletest/CMakeFiles/install.util: CUSTOM_COMMAND _deps/googletest-build/googletest/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\cmake.exe -P cmake_install.cmake"
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/install: phony _deps/googletest-build/googletest/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build _deps/googletest-build/googletest/CMakeFiles/install/local.util: CUSTOM_COMMAND _deps/googletest-build/googletest/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake"
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/install/local: phony _deps/googletest-build/googletest/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build _deps/googletest-build/googletest/CMakeFiles/install/strip.util: CUSTOM_COMMAND _deps/googletest-build/googletest/all
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D "C:\Users\Spek\Documents\Projeto Padrão\fortress\build\_deps\googletest-build\googletest" && C:\msys64\ucrt64\bin\cmake.exe -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake"
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build _deps/googletest-build/googletest/install/strip: phony _deps/googletest-build/googletest/CMakeFiles/install/strip.util
+
+# =============================================================================
 # Target aliases.
 
 build fortress: phony src/cli/fortress.exe
@@ -635,9 +1329,31 @@ build fortress_binary: phony src/binary/libfortress_binary.a
 
 build fortress_core: phony src/core/libfortress_core.a
 
+build fortress_tests: phony tests/fortress_tests.exe
+
+build fortress_tests.exe: phony tests/fortress_tests.exe
+
+build generate_fixtures: phony tests/generate_fixtures
+
+build gmock: phony lib/libgmock.a
+
+build gmock_main: phony lib/libgmock_main.a
+
+build gtest: phony lib/libgtest.a
+
+build gtest_main: phony lib/libgtest_main.a
+
 build libfortress_binary.a: phony src/binary/libfortress_binary.a
 
 build libfortress_core.a: phony src/core/libfortress_core.a
+
+build libgmock.a: phony lib/libgmock.a
+
+build libgmock_main.a: phony lib/libgmock_main.a
+
+build libgtest.a: phony lib/libgtest.a
+
+build libgtest_main.a: phony lib/libgtest_main.a
 
 # =============================================================================
 # Folder targets.
@@ -647,7 +1363,28 @@ build libfortress_core.a: phony src/core/libfortress_core.a
 #############################################
 # Folder: C:/Users/Spek/Documents/Projeto Padrão/fortress/build
 
-build all: phony src/core/all src/binary/all src/cli/all
+build all: phony src/core/all src/binary/all src/cli/all tests/all
+
+# =============================================================================
+
+#############################################
+# Folder: C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build
+
+build _deps/googletest-build/all: phony _deps/googletest-build/googlemock/all
+
+# =============================================================================
+
+#############################################
+# Folder: C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build/googlemock
+
+build _deps/googletest-build/googlemock/all: phony lib/libgmock.a lib/libgmock_main.a _deps/googletest-build/googletest/all
+
+# =============================================================================
+
+#############################################
+# Folder: C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build/googletest
+
+build _deps/googletest-build/googletest/all: phony lib/libgtest.a lib/libgtest_main.a
 
 # =============================================================================
 
@@ -671,20 +1408,27 @@ build src/cli/all: phony src/cli/fortress.exe
 build src/core/all: phony src/core/libfortress_core.a
 
 # =============================================================================
+
+#############################################
+# Folder: C:/Users/Spek/Documents/Projeto Padrão/fortress/build/tests
+
+build tests/all: phony tests/fortress_tests.exe _deps/googletest-build/all
+
+# =============================================================================
 # Built-in targets
 
 
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/core/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/binary/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/cli/cmake_install.cmake: RERUN_CMAKE | C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/include/fortress/version.h.in C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/CMakeLists.txt C$:/msys64/ucrt64/lib/cmake/llvm/AddLLVM.cmake C$:/msys64/ucrt64/lib/cmake/llvm/DetermineGCCCompatible.cmake C$:/msys64/ucrt64/lib/cmake/llvm/FindFFI.cmake C$:/msys64/ucrt64/lib/cmake/llvm/Findzstd.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVM-Config.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfig.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMDistributionSupport.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports-release.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMProcessSources.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfig.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets-release.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCXXInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCommonLanguageInclude.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeFindDependencyMacro.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeGenericSystem.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeInitializeConfigs.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeLanguageInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePushCheckState.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeRCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPack.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPackComponent.cmake C$:/msys64/ucrt64/share/cmake/Modules/CheckCSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindLibXml2.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageHandleStandardArgs.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageMessage.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPkgConfig.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindZLIB.cmake C$:/msys64/ucrt64/share/cmake/Modules/GNUInstallDirs.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckCommon.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-Initialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-windres.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/WindowsPaths.cmake C$:/msys64/ucrt64/share/cmake/Modules/SelectLibraryConfigurations.cmake C$:/msys64/ucrt64/share/cmake/Templates/CPackConfig.cmake.in CMakeCache.txt CMakeFiles/4.4.3/CMakeCCompiler.cmake CMakeFiles/4.4.3/CMakeCXXCompiler.cmake CMakeFiles/4.4.3/CMakeRCCompiler.cmake CMakeFiles/4.4.3/CMakeSystem.cmake
+build build.ninja C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/core/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/binary/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/src/cli/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/tests/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/googlemock/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/googletest/cmake_install.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/CTestTestfile.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/tests/CTestTestfile.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/CTestTestfile.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/googlemock/CTestTestfile.cmake C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/build/_deps/googletest-build/googletest/CTestTestfile.cmake: RERUN_CMAKE | C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/include/fortress/version.h.in C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/CMakeLists.txt C$:/msys64/ucrt64/lib/cmake/llvm/AddLLVM.cmake C$:/msys64/ucrt64/lib/cmake/llvm/DetermineGCCCompatible.cmake C$:/msys64/ucrt64/lib/cmake/llvm/FindFFI.cmake C$:/msys64/ucrt64/lib/cmake/llvm/Findzstd.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVM-Config.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfig.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMDistributionSupport.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports-release.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMProcessSources.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfig.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets-release.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets.cmake C$:/msys64/ucrt64/share/cmake/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in C$:/msys64/ucrt64/share/cmake/Modules/CMakeCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCXXInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCommonLanguageInclude.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeDependentOption.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeFindDependencyMacro.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeGenericSystem.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeInitializeConfigs.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeLanguageInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePackageConfigHelpers.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePushCheckState.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeRCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPack.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPackComponent.cmake C$:/msys64/ucrt64/share/cmake/Modules/CheckCSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake C$:/msys64/ucrt64/share/cmake/Modules/FetchContent.cmake C$:/msys64/ucrt64/share/cmake/Modules/FetchContent/CMakeLists.cmake.in C$:/msys64/ucrt64/share/cmake/Modules/FindGit.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindLibXml2.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindOpenSSL.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageHandleStandardArgs.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageMessage.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPkgConfig.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPython3.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPython/Support.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindZLIB.cmake C$:/msys64/ucrt64/share/cmake/Modules/GNUInstallDirs.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckCommon.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-Initialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-windres.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/WindowsPaths.cmake C$:/msys64/ucrt64/share/cmake/Modules/SelectLibraryConfigurations.cmake C$:/msys64/ucrt64/share/cmake/Modules/WriteBasicConfigVersionFile.cmake C$:/msys64/ucrt64/share/cmake/Templates/CPackConfig.cmake.in C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonConfig.cmake C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonConfigVersion.cmake C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonTargets.cmake CMakeCache.txt CMakeFiles/4.4.3/CMakeCCompiler.cmake CMakeFiles/4.4.3/CMakeCXXCompiler.cmake CMakeFiles/4.4.3/CMakeRCCompiler.cmake CMakeFiles/4.4.3/CMakeSystem.cmake _deps/googletest-src/CMakeLists.txt _deps/googletest-src/googlemock/CMakeLists.txt _deps/googletest-src/googlemock/cmake/gmock.pc.in _deps/googletest-src/googlemock/cmake/gmock_main.pc.in _deps/googletest-src/googletest/CMakeLists.txt _deps/googletest-src/googletest/cmake/Config.cmake.in _deps/googletest-src/googletest/cmake/gtest.pc.in _deps/googletest-src/googletest/cmake/gtest_main.pc.in _deps/googletest-src/googletest/cmake/internal_utils.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/include/fortress/version.h.in C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/CMakeLists.txt C$:/msys64/ucrt64/lib/cmake/llvm/AddLLVM.cmake C$:/msys64/ucrt64/lib/cmake/llvm/DetermineGCCCompatible.cmake C$:/msys64/ucrt64/lib/cmake/llvm/FindFFI.cmake C$:/msys64/ucrt64/lib/cmake/llvm/Findzstd.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVM-Config.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfig.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMDistributionSupport.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports-release.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMProcessSources.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfig.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets-release.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCXXInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCommonLanguageInclude.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeFindDependencyMacro.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeGenericSystem.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeInitializeConfigs.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeLanguageInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePushCheckState.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeRCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPack.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPackComponent.cmake C$:/msys64/ucrt64/share/cmake/Modules/CheckCSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindLibXml2.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageHandleStandardArgs.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageMessage.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPkgConfig.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindZLIB.cmake C$:/msys64/ucrt64/share/cmake/Modules/GNUInstallDirs.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckCommon.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-Initialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-windres.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/WindowsPaths.cmake C$:/msys64/ucrt64/share/cmake/Modules/SelectLibraryConfigurations.cmake C$:/msys64/ucrt64/share/cmake/Templates/CPackConfig.cmake.in CMakeCache.txt CMakeFiles/4.4.3/CMakeCCompiler.cmake CMakeFiles/4.4.3/CMakeCXXCompiler.cmake CMakeFiles/4.4.3/CMakeRCCompiler.cmake CMakeFiles/4.4.3/CMakeSystem.cmake: phony
+build C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/include/fortress/version.h.in C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/binary/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/cli/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/src/core/CMakeLists.txt C$:/Users/Spek/Documents/Projeto$ Padrão/fortress/tests/CMakeLists.txt C$:/msys64/ucrt64/lib/cmake/llvm/AddLLVM.cmake C$:/msys64/ucrt64/lib/cmake/llvm/DetermineGCCCompatible.cmake C$:/msys64/ucrt64/lib/cmake/llvm/FindFFI.cmake C$:/msys64/ucrt64/lib/cmake/llvm/Findzstd.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVM-Config.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfig.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMDistributionSupport.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports-release.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMExports.cmake C$:/msys64/ucrt64/lib/cmake/llvm/LLVMProcessSources.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfig.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdConfigVersion.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets-release.cmake C$:/msys64/ucrt64/lib/cmake/zstd/zstdTargets.cmake C$:/msys64/ucrt64/share/cmake/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in C$:/msys64/ucrt64/share/cmake/Modules/CMakeCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCXXInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeCommonLanguageInclude.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeDependentOption.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeFindDependencyMacro.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeGenericSystem.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeInitializeConfigs.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeLanguageInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePackageConfigHelpers.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakePushCheckState.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeRCInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPack.cmake C$:/msys64/ucrt64/share/cmake/Modules/CPackComponent.cmake C$:/msys64/ucrt64/share/cmake/Modules/CheckCSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Compiler/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake C$:/msys64/ucrt64/share/cmake/Modules/FetchContent.cmake C$:/msys64/ucrt64/share/cmake/Modules/FetchContent/CMakeLists.cmake.in C$:/msys64/ucrt64/share/cmake/Modules/FindGit.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindLibXml2.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindOpenSSL.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageHandleStandardArgs.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPackageMessage.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPkgConfig.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPython3.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindPython/Support.cmake C$:/msys64/ucrt64/share/cmake/Modules/FindZLIB.cmake C$:/msys64/ucrt64/share/cmake/Modules/GNUInstallDirs.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckCommon.cmake C$:/msys64/ucrt64/share/cmake/Modules/Internal/CheckSourceCompiles.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Linker/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-C.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX-ABI.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU-CXX.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-GNU.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-Initialize.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows-windres.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/Windows.cmake C$:/msys64/ucrt64/share/cmake/Modules/Platform/WindowsPaths.cmake C$:/msys64/ucrt64/share/cmake/Modules/SelectLibraryConfigurations.cmake C$:/msys64/ucrt64/share/cmake/Modules/WriteBasicConfigVersionFile.cmake C$:/msys64/ucrt64/share/cmake/Templates/CPackConfig.cmake.in C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonConfig.cmake C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonConfigVersion.cmake C$:/msys64/ucrt64/share/cmake/nlohmann_json/nlohmann_jsonTargets.cmake CMakeCache.txt CMakeFiles/4.4.3/CMakeCCompiler.cmake CMakeFiles/4.4.3/CMakeCXXCompiler.cmake CMakeFiles/4.4.3/CMakeRCCompiler.cmake CMakeFiles/4.4.3/CMakeSystem.cmake _deps/googletest-src/CMakeLists.txt _deps/googletest-src/googlemock/CMakeLists.txt _deps/googletest-src/googlemock/cmake/gmock.pc.in _deps/googletest-src/googlemock/cmake/gmock_main.pc.in _deps/googletest-src/googletest/CMakeLists.txt _deps/googletest-src/googletest/cmake/Config.cmake.in _deps/googletest-src/googletest/cmake/gtest.pc.in _deps/googletest-src/googletest/cmake/gtest_main.pc.in _deps/googletest-src/googletest/cmake/internal_utils.cmake: phony
 
 
 #############################################

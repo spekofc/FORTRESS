@@ -3,6 +3,7 @@
 #include <fortress/binary/formats/pe/pe_parser.h>
 #include <fortress/core/file_utils.h>
 #include <gtest/gtest.h>
+#include <cstring>
 
 using namespace fortress;
 
@@ -235,9 +236,4 @@ TEST(PEParser, TruncatedHeader) {
     pe::PEParser parser;
     auto result = parser.parse(data);
     EXPECT_FALSE(result);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }

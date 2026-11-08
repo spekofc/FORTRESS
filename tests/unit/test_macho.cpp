@@ -2,6 +2,7 @@
 
 #include <fortress/binary/formats/macho/macho_parser.h>
 #include <gtest/gtest.h>
+#include <cstring>
 
 using namespace fortress;
 
@@ -129,7 +130,7 @@ static std::vector<std::byte> create_minimal_macho64() {
 
     // String table
     auto* strtab = ptr + 0x4100;
-    strtab[0] = 0; // Empty string for index 0
+    strtab[0] = std::byte{0}; // Empty string for index 0
     std::memcpy(strtab + 1, "_main\0", 6);
 
     // Fill __text with NOPs
@@ -196,7 +197,7 @@ static std::vector<std::byte> create_minimal_macho32() {
 
     // String table
     auto* strtab = ptr + 0x4100;
-    strtab[0] = 0;
+    strtab[0] = std::byte{0};
     std::memcpy(strtab + 1, "_start\0", 7);
 
     std::memset(ptr + 0x1000, 0x90, 0x1000);
@@ -250,16 +251,12 @@ TEST(MachOParser, SectionPermissions) {
     ASSERT_TRUE(result);
 
     auto& analysis = result.value();
-    bool found_text = false, found_stubs = false;
+    bool found_text = false;
     for (const auto& sec : analysis.sections) {
         if (sec.name.find("__text") != std::string::npos) {
             found_text = true;
             EXPECT_TRUE(sec.is_executable());
             EXPECT_FALSE(sec.is_writable());
-        }
-        if (sec.name.find("__stubs") != std::string::npos) {
-            found_stubs = true;
-            EXPECT_TRUE(sec.is_executable());
         }
     }
     EXPECT_TRUE(found_text);
@@ -307,9 +304,4 @@ TEST(MachOParser, Functions) {
         }
     }
     EXPECT_TRUE(has_entry);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }

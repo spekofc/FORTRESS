@@ -52,6 +52,11 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("C:/Users/Spek/Documents/Projeto Padrão/fortress/build/src/cli/cmake_install.cmake")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("C:/Users/Spek/Documents/Projeto Padrão/fortress/build/tests/cmake_install.cmake")
+endif()
+
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/fortress" TYPE DIRECTORY FILES "C:/Users/Spek/Documents/Projeto Padrão/fortress/include/fortress/" FILES_MATCHING REGEX "/[^/]*\\.h$")
 endif()

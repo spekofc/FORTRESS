@@ -1,3 +1,37 @@
 # ninja log v7
-1	79	8157770545420869	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	fc47b91e5c7b803e
-1	79	8157770545420869	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	fc47b91e5c7b803e
+2	81	8157936282468392	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	fc47b91e5c7b803e
+2	81	8157936282468392	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-mkdir	fc47b91e5c7b803e
+2	30372	8157979548961402	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	512f85464f1f1f52
+2	30372	8157979548961402	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-download	512f85464f1f1f52
+2	216	8158657294686878	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	f8019fc0401ac53c
+2	216	8158657294686878	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	f8019fc0401ac53c
+216	298	8158657297538515	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	8815af6534dafd70
+216	298	8158657297538515	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	8815af6534dafd70
+298	380	8158657298349778	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	53b993f2be8004d2
+298	380	8158657298349778	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	53b993f2be8004d2
+380	461	8158657299161991	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	19b303ff24d38cba
+380	461	8158657299161991	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	19b303ff24d38cba
+461	543	8158657299992514	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	307401a98f26c8c3
+461	543	8158657299992514	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	307401a98f26c8c3
+543	624	8158657300788224	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	8f77c388ad1b7581
+543	624	8158657300788224	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	8f77c388ad1b7581
+624	738	8158657301935310	CMakeFiles/googletest-populate-complete	6a26295302ec9754
+624	738	8158657301935310	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	6a26295302ec9754
+624	738	8158657301935310	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/CMakeFiles/googletest-populate-complete	6a26295302ec9754
+624	738	8158657301935310	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	6a26295302ec9754
+2	221	8158660832605960	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	f8019fc0401ac53c
+2	221	8158660832605960	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-update	f8019fc0401ac53c
+221	314	8158660835603813	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	8815af6534dafd70
+221	314	8158660835603813	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-patch	8815af6534dafd70
+314	397	8158660836451280	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	53b993f2be8004d2
+314	397	8158660836451280	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-configure	53b993f2be8004d2
+397	477	8158660837249383	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	19b303ff24d38cba
+397	477	8158660837249383	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-build	19b303ff24d38cba
+477	564	8158660838111134	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	307401a98f26c8c3
+477	564	8158660838111134	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-install	307401a98f26c8c3
+564	646	8158660838936834	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	8f77c388ad1b7581
+564	646	8158660838936834	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-test	8f77c388ad1b7581
+646	761	8158660840079092	CMakeFiles/googletest-populate-complete	6a26295302ec9754
+646	761	8158660840079092	googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	6a26295302ec9754
+646	761	8158660840079092	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/CMakeFiles/googletest-populate-complete	6a26295302ec9754
+646	761	8158660840079092	C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-subbuild/googletest-populate-prefix/src/googletest-populate-stamp/googletest-populate-done	6a26295302ec9754

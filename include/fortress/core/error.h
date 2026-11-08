@@ -186,6 +186,10 @@ public:
     const T& value() const& { return std::get<0>(storage_); }
     T&& value() && { return std::get<0>(std::move(storage_)); }
 
+    // Pointer-like access
+    T* operator->() & { return &std::get<0>(storage_); }
+    const T* operator->() const& { return &std::get<0>(storage_); }
+
     // Error access (undefined behavior if success)
     Error& error() & { return std::get<1>(storage_); }
     const Error& error() const& { return std::get<1>(storage_); }

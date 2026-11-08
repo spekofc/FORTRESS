@@ -14,6 +14,9 @@
 # EXTERNAL cache entries
 ########################
 
+//Builds the googlemock subproject
+BUILD_GMOCK:BOOL=ON
+
 //Path to a program.
 CMAKE_ADDR2LINE:FILEPATH=C:/msys64/ucrt64/bin/addr2line.exe
 
@@ -24,10 +27,8 @@ CMAKE_AR:FILEPATH=C:/msys64/ucrt64/bin/ar.exe
 // MinSizeRel ...
 CMAKE_BUILD_TYPE:STRING=Debug
 
-//Full path to the compiler used for language <LANG>. Set by CMake
-// during compiler detection on the first configure; users may
-// override on the command line to select a specific toolchain.
-CMAKE_CXX_COMPILER:UNINITIALIZED=C:/msys64/ucrt64/bin/g++.exe
+//CXX compiler
+CMAKE_CXX_COMPILER:STRING=C:/msys64/ucrt64/bin/g++.exe
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
@@ -55,10 +56,8 @@ CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 //Libraries linked by default with all C++ applications.
 CMAKE_CXX_STANDARD_LIBRARIES:STRING=-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
 
-//Full path to the compiler used for language <LANG>. Set by CMake
-// during compiler detection on the first configure; users may
-// override on the command line to select a specific toolchain.
-CMAKE_C_COMPILER:UNINITIALIZED=C:/msys64/ucrt64/bin/gcc.exe
+//C compiler
+CMAKE_C_COMPILER:STRING=C:/msys64/ucrt64/bin/gcc.exe
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
@@ -342,9 +341,6 @@ CPACK_SOURCE_7Z:BOOL=ON
 //Enable to build ZIP source packages
 CPACK_SOURCE_ZIP:BOOL=ON
 
-//The directory containing a CMake configuration file for Clang.
-Clang_DIR:PATH=C:/msys64/ucrt64/lib/cmake/clang
-
 //Directory under which to collect all populated content
 FETCHCONTENT_BASE_DIR:PATH=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps
 
@@ -384,7 +380,7 @@ FORTRESS_BUILD_CLI:BOOL=ON
 FORTRESS_BUILD_SHARED_LIBS:BOOL=OFF
 
 //Build tests
-FORTRESS_BUILD_TESTS:BOOL=OFF
+FORTRESS_BUILD_TESTS:BOOL=ON
 
 //Enable sanitizers (Debug only)
 FORTRESS_ENABLE_SANITIZERS:BOOL=OFF
@@ -401,6 +397,14 @@ FORTRESS_USE_LLVM_DISASSEMBLER:BOOL=ON
 //Git command line client
 GIT_EXECUTABLE:FILEPATH=C:/Program Files/Git/cmd/git.exe
 
+//Use Abseil and RE2. Requires Abseil and RE2 to be separately
+// added to the build.
+GTEST_HAS_ABSL:BOOL=OFF
+
+//Enable installation of googletest. (Projects embedding googletest
+// may want to turn this OFF.)
+INSTALL_GTEST:BOOL=ON
+
 //Path to a file.
 LIBXML2_INCLUDE_DIR:PATH=C:/msys64/ucrt64/include/libxml2
 
@@ -410,14 +414,23 @@ LIBXML2_LIBRARY:FILEPATH=C:/msys64/ucrt64/lib/libxml2.dll.a
 //Path to a program.
 LIBXML2_XMLLINT_EXECUTABLE:FILEPATH=C:/msys64/ucrt64/bin/xmllint.exe
 
+//Path to a library.
+LIB_EAY:FILEPATH=C:/msys64/ucrt64/lib/libcrypto.dll.a
+
 //The directory containing a CMake configuration file for LLVM.
 LLVM_DIR:PATH=C:/msys64/ucrt64/lib/cmake/llvm
+
+//Path to a file.
+OPENSSL_INCLUDE_DIR:PATH=C:/msys64/ucrt64/include
 
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=C:/msys64/ucrt64/bin/pkg-config.exe
+
+//Path to a library.
+SSL_EAY:FILEPATH=C:/msys64/ucrt64/lib/libssl.dll.a
 
 //Path to a file.
 ZLIB_INCLUDE_DIR:PATH=C:/msys64/ucrt64/include
@@ -427,6 +440,52 @@ ZLIB_LIBRARY_DEBUG:FILEPATH=ZLIB_LIBRARY_DEBUG-NOTFOUND
 
 //Path to a library.
 ZLIB_LIBRARY_RELEASE:FILEPATH=C:/msys64/ucrt64/lib/libz.dll.a
+
+//Value Computed by CMake
+gmock_BINARY_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build/googlemock
+
+//Value Computed by CMake
+gmock_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+gmock_SOURCE_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googlemock
+
+//Build all of Google Mock's own tests.
+gmock_build_tests:BOOL=OFF
+
+//Value Computed by CMake
+googletest-distribution_BINARY_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build
+
+//Value Computed by CMake
+googletest-distribution_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+googletest-distribution_SOURCE_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src
+
+//Value Computed by CMake
+gtest_BINARY_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build/googletest
+
+//Value Computed by CMake
+gtest_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+gtest_SOURCE_DIR:STATIC=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src/googletest
+
+//Build gtest's sample programs.
+gtest_build_samples:BOOL=OFF
+
+//Build all of gtest's own tests.
+gtest_build_tests:BOOL=OFF
+
+//Disable uses of pthreads in gtest.
+gtest_disable_pthreads:BOOL=OFF
+
+//Use shared (DLL) run-time lib even when Google Test is built
+// as static lib.
+gtest_force_shared_crt:BOOL=OFF
+
+//Build gtest with internal symbols hidden in shared libraries.
+gtest_hide_internal_symbols:BOOL=OFF
 
 //The directory containing a CMake configuration file for nlohmann_json.
 nlohmann_json_DIR:PATH=C:/msys64/ucrt64/share/cmake/nlohmann_json
@@ -586,7 +645,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=4
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=8
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -675,6 +734,10 @@ FFI_STATIC_LIBRARIES-ADVANCED:INTERNAL=1
 FIND_PACKAGE_MESSAGE_DETAILS_FFI:INTERNAL=[C:/msys64/ucrt64/lib/libffi.dll.a][1][v()]
 //Details about finding LibXml2
 FIND_PACKAGE_MESSAGE_DETAILS_LibXml2:INTERNAL=[C:/msys64/ucrt64/lib/libxml2.dll.a][C:/msys64/ucrt64/include/libxml2][v2.15.4()]
+//Details about finding OpenSSL
+FIND_PACKAGE_MESSAGE_DETAILS_OpenSSL:INTERNAL=[C:/msys64/ucrt64/lib/libcrypto.dll.a][C:/msys64/ucrt64/include][ ][v3.6.4()]
+//Details about finding Python3
+FIND_PACKAGE_MESSAGE_DETAILS_Python3:INTERNAL=[C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/python.exe][found components: Interpreter ][v3.15.0()]
 //Details about finding ZLIB
 FIND_PACKAGE_MESSAGE_DETAILS_ZLIB:INTERNAL=[C:/msys64/ucrt64/lib/libz.dll.a][C:/msys64/ucrt64/include][ ][v1.3.2()]
 //Details about finding nlohmann_json
@@ -694,6 +757,10 @@ LIBXML2_INCLUDE_DIR-ADVANCED:INTERNAL=1
 LIBXML2_LIBRARY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: LIBXML2_XMLLINT_EXECUTABLE
 LIBXML2_XMLLINT_EXECUTABLE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: LIB_EAY
+LIB_EAY-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: OPENSSL_INCLUDE_DIR
+OPENSSL_INCLUDE_DIR-ADVANCED:INTERNAL=1
 PC_LIBFFI_CFLAGS:INTERNAL=-IC:/msys64/ucrt64/bin/../include
 PC_LIBFFI_CFLAGS_I:INTERNAL=
 PC_LIBFFI_CFLAGS_OTHER:INTERNAL=
@@ -768,6 +835,8 @@ PC_LIBXML_libxml-2.0_VERSION:INTERNAL=
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: SSL_EAY
+SSL_EAY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: ZLIB_INCLUDE_DIR
 ZLIB_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: ZLIB_LIBRARY_DEBUG
@@ -776,13 +845,41 @@ ZLIB_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
 ZLIB_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=C:/Program Files (x86)/FORTRESS
+//Compiler reason failure
+_Python3_Compiler_REASON_FAILURE:INTERNAL=
+//Development reason failure
+_Python3_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
+_Python3_EXECUTABLE:INTERNAL=C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/python.exe
+//Path to a program.
+_Python3_EXECUTABLE_DEBUG:INTERNAL=_Python3_EXECUTABLE_DEBUG-NOTFOUND
+//Python3 Properties
+_Python3_INTERPRETER_PROPERTIES:INTERNAL=Python;3;15;0;64;32;<none>;cp315-win_amd64;;C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/Lib;C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/Lib;C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/Lib/site-packages;C:/Users/Spek/AppData/Local/Python/pythoncore-3.15-64/Lib/site-packages
+_Python3_INTERPRETER_SIGNATURE:INTERNAL=57617def1da37c37b12fd4c4e9da8baf
+//NumPy reason failure
+_Python3_NumPy_REASON_FAILURE:INTERNAL=
 __pkg_config_arguments_PC_LIBFFI:INTERNAL=QUIET;libffi
 __pkg_config_arguments_PC_LIBXML:INTERNAL=QUIET;libxml-2.0
 __pkg_config_checked_PC_LIBFFI:INTERNAL=1
 __pkg_config_checked_PC_LIBXML:INTERNAL=1
+cmake_package_name:INTERNAL=GTest
+generated_dir:INTERNAL=C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-build/googletest/generated
+//ADVANCED property for variable: gmock_build_tests
+gmock_build_tests-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: gtest_build_samples
+gtest_build_samples-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: gtest_build_tests
+gtest_build_tests-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: gtest_disable_pthreads
+gtest_disable_pthreads-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: gtest_force_shared_crt
+gtest_force_shared_crt-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: gtest_hide_internal_symbols
+gtest_hide_internal_symbols-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_PC_LIBFFI_ffi
 pkgcfg_lib_PC_LIBFFI_ffi-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_PC_LIBXML_xml2
 pkgcfg_lib_PC_LIBXML_xml2-ADVANCED:INTERNAL=1
 prefix_result:INTERNAL=C:/msys64/ucrt64/bin/../lib
+targets_export_name:INTERNAL=GTestTargets
 

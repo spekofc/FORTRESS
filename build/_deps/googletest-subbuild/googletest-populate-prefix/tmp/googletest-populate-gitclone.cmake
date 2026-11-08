@@ -57,13 +57,13 @@ endif()
 
 execute_process(
   COMMAND "C:/Program Files/Git/cmd/git.exe"
-          checkout "release-1.14.0" --
+          checkout "v1.14.0" --
   WORKING_DIRECTORY "C:/Users/Spek/Documents/Projeto Padrão/fortress/build/_deps/googletest-src"
   RESULT_VARIABLE error_code
   ${maybe_show_command}
 )
 if(error_code)
-  message(FATAL_ERROR "Failed to checkout tag: 'release-1.14.0'")
+  message(FATAL_ERROR "Failed to checkout tag: 'v1.14.0'")
 endif()
 
 set(init_submodules TRUE)

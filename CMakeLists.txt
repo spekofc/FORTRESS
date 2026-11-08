@@ -22,7 +22,7 @@ endif()
 
 # Build options
 option(FORTRESS_BUILD_SHARED_LIBS "Build shared libraries" OFF)
-option(FORTRESS_BUILD_TESTS "Build tests" OFF)
+option(FORTRESS_BUILD_TESTS "Build tests" ON)
 option(FORTRESS_BUILD_CLI "Build CLI tool" ON)
 option(FORTRESS_ENABLE_SANITIZERS "Enable sanitizers (Debug only)" OFF)
 option(FORTRESS_USE_LLVM_DISASSEMBLER "Use LLVM MC disassembler" ON)
@@ -37,9 +37,9 @@ endif()
 if(MSVC)
     add_compile_options(/W4 /WX /permissive- /std:c++20)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wdouble-promotion -Wformat=2)
-    # Suppress system header warnings
-    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body)
+    add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion -Wnull-dereference -Wformat=2)
+    # Suppress system header warnings and third-party issues
+    add_compile_options(-Wno-builtin-declaration-mismatch -Wno-attributes -Wno-sign-conversion -Wno-template-body -Wno-double-promotion)
 endif()
 
 # Enable C for LLVM's internal checks
@@ -83,11 +83,11 @@ add_subdirectory(src/core)
 add_subdirectory(src/binary)
 add_subdirectory(src/cli)
 
-# Tests - DISABLED by default (test fixtures need fixes)
-# if(FORTRESS_BUILD_TESTS)
-#     enable_testing()
-#     add_subdirectory(tests)
-# endif()
+# Tests
+if(FORTRESS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # Installation
 install(DIRECTORY include/fortress/

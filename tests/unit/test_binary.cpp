@@ -139,8 +139,3 @@ TEST(BinaryInfo, FunctionSource) {
     fn.source = FunctionSource::Heuristic;
     EXPECT_EQ(to_string(fn.source), "heuristic");
 }
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

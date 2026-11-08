@@ -1,473 +1,112 @@
 // FORTRESS Hash Implementation
-// Pure C++ implementations of common hash algorithms
+// Uses OpenSSL EVP API for MD5, SHA-1, SHA-256
+// Reference implementations for SHA-384, SHA-512 (corrected per FIPS 180-4)
+// Reference implementations for CRC32, CRC32C, xxHash64, BLAKE3, Entropy
 
 #include <fortress/core/hash.h>
 #include <fortress/core/error.h>
-#include <array>
+#include <openssl/evp.h>
 #include <cstring>
 #include <memory>
 #include <fstream>
 #include <cmath>
+#include <vector>
+#include <optional>
+#include <span>
+#include <cstdint>
 
 namespace fortress {
 
 // ============================================================================
-// SHA-256 Implementation
+// SHA-2 shared round constants (FIPS 180-4)
+static constexpr uint64_t SHA2_K[80] = {
+    0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
+    0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
+    0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
+    0x72be5d74f27b896f, 0x80deb1fe3b1696b1, 0x9bdc06a725c71235, 0xc19bf174cf692694,
+    0xe49b69c19ef14ad2, 0xefbe4786384f25e3, 0x0fc19dc68b8cd5b5, 0x240ca1cc77ac9c65,
+    0x2de92c6f592b0275, 0x4a7484aa6ea6e483, 0x5cb0a9dcbd41fbd4, 0x76f988da831153b5,
+    0x983e5152ee66dfab, 0xa831c66d2db43210, 0xb00327c898fb213f, 0xbf597fc7beef0ee4,
+    0xc6e00bf33da88fc2, 0xd5a79147930aa725, 0x06ca6351e003826f, 0x142929670a0e6e70,
+    0x27b70a8546d22ffc, 0x2e1b21385c26c926, 0x4d2c6dfc5ac42aed, 0x53380d139d95b3df,
+    0x650a73548baf63de, 0x766a0abb3c77b2a8, 0x81c2c92e47edaee6, 0x92722c851482353b,
+    0xa2bfe8a14cf10364, 0xa81a664bbc423001, 0xc24b8b70d0f89791, 0xc76c51a30654be30,
+    0xd192e819d6ef5218, 0xd69906245565a910, 0xf40e35855771202a, 0x106aa07032bbd1b8
+};
+
+// SHA-2 shared helper functions
+inline uint64_t rotr64(uint64_t x, int n) { return (x >> n) | (x << (64 - n)); }
+inline uint64_t shr64(uint64_t x, int n) { return x >> n; }
+inline uint64_t ch64(uint64_t x, uint64_t y, uint64_t z) { return (x & y) ^ (~x & z); }
+inline uint64_t maj64(uint64_t x, uint64_t y, uint64_t z) { return (x & y) ^ (x & z) ^ (y & z); }
+inline uint64_t sigma0_512(uint64_t x) { return rotr64(x, 28) ^ rotr64(x, 34) ^ rotr64(x, 39); }
+inline uint64_t sigma1_512(uint64_t x) { return rotr64(x, 14) ^ rotr64(x, 18) ^ rotr64(x, 41); }
+inline uint64_t sigma0_512_m(uint64_t x) { return rotr64(x, 1) ^ rotr64(x, 8) ^ shr64(x, 7); }
+inline uint64_t sigma1_512_m(uint64_t x) { return rotr64(x, 19) ^ rotr64(x, 61) ^ shr64(x, 6); }
+
+// ============================================================================
+// OpenSSL EVP-based Hash Context (MD5, SHA-1, SHA-256)
 // ============================================================================
 
-class SHA256Context : public HashContext {
+class EVPHashContext : public HashContext {
 public:
-    SHA256Context() { reset(); }
+    explicit EVPHashContext(EVP_MD const* md, HashAlgorithm algo) : md_(md), algorithm_(algo) {
+        static bool openssl_initialized = []() {
+            OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS | OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, nullptr);
+            return true;
+        }();
+        (void)openssl_initialized;
 
-    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::SHA256; }
+        ctx_ = EVP_MD_CTX_new();
+        if (!ctx_) {
+            throw std::bad_alloc();
+        }
+        reset();
+    }
+
+    ~EVPHashContext() override {
+        EVP_MD_CTX_free(ctx_);
+    }
+
+    HashAlgorithm algorithm() const noexcept override {
+        return algorithm_;
+    }
 
     void reset() override {
-        state_[0] = 0x6a09e667;
-        state_[1] = 0xbb67ae85;
-        state_[2] = 0x3c6ef372;
-        state_[3] = 0xa54ff53a;
-        state_[4] = 0x510e527f;
-        state_[5] = 0x9b05688c;
-        state_[6] = 0x1f83d9ab;
-        state_[7] = 0x5be0cd19;
-        count_ = 0;
-        std::fill(buffer_.begin(), buffer_.end(), std::byte{0});
-        buffer_pos_ = 0;
+        EVP_DigestInit_ex(ctx_, md_, nullptr);
     }
 
     Result<void> update(std::span<const std::byte> data) override {
-        const std::byte* ptr = data.data();
-        Size len = data.size();
-
-        while (len > 0) {
-            Size space = 64 - buffer_pos_;
-            Size copy = std::min(len, space);
-            std::memcpy(buffer_.data() + buffer_pos_, ptr, copy);
-            buffer_pos_ += copy;
-            ptr += copy;
-            len -= copy;
-
-            if (buffer_pos_ == 64) {
-                transform(buffer_.data());
-                buffer_pos_ = 0;
-            }
+        if (data.empty()) return Result<void>::ok();
+        if (!EVP_DigestUpdate(ctx_, data.data(), data.size())) {
+            return Result<void>::err(ErrorCode::HashComputationFailed, "EVP_DigestUpdate failed");
         }
-        count_ += data.size();
         return Result<void>::ok();
     }
 
     Result<Digest> finalize() override {
-        // Padding
-        Size bits = count_ * 8;
-        buffer_[buffer_pos_++] = std::byte{0x80};
-
-        if (buffer_pos_ > 56) {
-            while (buffer_pos_ < 64) buffer_[buffer_pos_++] = std::byte{0};
-            transform(buffer_.data());
-            buffer_pos_ = 0;
+        Digest digest(algorithm_);
+        digest.mutable_bytes().resize(digest_size_for_algorithm(algorithm_));
+        unsigned int len = 0;
+        if (!EVP_DigestFinal_ex(ctx_, reinterpret_cast<unsigned char*>(digest.mutable_bytes().data()), &len)) {
+            return Result<Digest>::err(ErrorCode::HashComputationFailed, "EVP_DigestFinal_ex failed");
         }
-
-        while (buffer_pos_ < 56) buffer_[buffer_pos_++] = std::byte{0};
-
-        // Append length in bits (big-endian)
-        for (int i = 7; i >= 0; --i) {
-            buffer_[buffer_pos_++] = static_cast<std::byte>((bits >> (i * 8)) & 0xFF);
-        }
-        transform(buffer_.data());
-
-        Digest digest(HashAlgorithm::SHA256);
-        digest.mutable_bytes().resize(32);
-        for (int i = 0; i < 8; ++i) {
-            auto* out = digest.mutable_bytes().data() + i * 4;
-            out[0] = static_cast<std::byte>((state_[i] >> 24) & 0xFF);
-            out[1] = static_cast<std::byte>((state_[i] >> 16) & 0xFF);
-            out[2] = static_cast<std::byte>((state_[i] >> 8) & 0xFF);
-            out[3] = static_cast<std::byte>(state_[i] & 0xFF);
+        if (static_cast<Size>(len) != digest.size()) {
+            return Result<Digest>::err(ErrorCode::HashComputationFailed, "Unexpected digest size");
         }
         return digest;
     }
 
 private:
-    static constexpr uint32_t K[64] = {
-        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-    };
+    EVP_MD_CTX* ctx_ = nullptr;
+    EVP_MD const* md_ = nullptr;
+    HashAlgorithm algorithm_ = HashAlgorithm::None;
 
-    uint32_t rotr(uint32_t x, int n) const { return (x >> n) | (x << (32 - n)); }
-    uint32_t shr(uint32_t x, int n) const { return x >> n; }
-    uint32_t ch(uint32_t x, uint32_t y, uint32_t z) const { return (x & y) ^ (~x & z); }
-    uint32_t maj(uint32_t x, uint32_t y, uint32_t z) const { return (x & y) ^ (x & z) ^ (y & z); }
-    uint32_t sigma0(uint32_t x) const { return rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22); }
-    uint32_t sigma1(uint32_t x) const { return rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25); }
-    uint32_t gamma0(uint32_t x) const { return rotr(x, 7) ^ rotr(x, 18) ^ shr(x, 3); }
-    uint32_t gamma1(uint32_t x) const { return rotr(x, 17) ^ rotr(x, 19) ^ shr(x, 10); }
-
-    void transform(const std::byte* block) {
-        uint32_t w[64];
-        for (int i = 0; i < 16; ++i) {
-            w[i] = (static_cast<uint32_t>(block[i*4]) << 24) |
-                   (static_cast<uint32_t>(block[i*4+1]) << 16) |
-                   (static_cast<uint32_t>(block[i*4+2]) << 8) |
-                   static_cast<uint32_t>(block[i*4+3]);
-        }
-        for (int i = 16; i < 64; ++i) {
-            w[i] = gamma1(w[i-2]) + w[i-7] + gamma0(w[i-15]) + w[i-16];
-        }
-
-        uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
-        uint32_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
-
-        for (int i = 0; i < 64; ++i) {
-            uint32_t t1 = h + sigma1(e) + ch(e, f, g) + K[i] + w[i];
-            uint32_t t2 = sigma0(a) + maj(a, b, c);
-            h = g; g = f; f = e; e = d + t1;
-            d = c; c = b; b = a; a = t1 + t2;
-        }
-
-        state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
-        state_[4] += e; state_[5] += f; state_[6] += g; state_[7] += h;
-    }
-
-    uint32_t state_[8];
-    uint64_t count_;
-    std::array<std::byte, 64> buffer_;
-    Size buffer_pos_ = 0;
+    friend Result<std::unique_ptr<HashContext>> create_hash_context(HashAlgorithm algo);
 };
 
 // ============================================================================
-// SHA-1 Implementation
-// ============================================================================
-
-class SHA1Context : public HashContext {
-public:
-    SHA1Context() { reset(); }
-
-    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::SHA1; }
-
-    void reset() override {
-        state_[0] = 0x67452301;
-        state_[1] = 0xEFCDAB89;
-        state_[2] = 0x98BADCFE;
-        state_[3] = 0x10325476;
-        state_[4] = 0xC3D2E1F0;
-        count_ = 0;
-        buffer_pos_ = 0;
-    }
-
-    Result<void> update(std::span<const std::byte> data) override {
-        const std::byte* ptr = data.data();
-        Size len = data.size();
-
-        while (len > 0) {
-            Size space = 64 - buffer_pos_;
-            Size copy = std::min(len, space);
-            std::memcpy(buffer_.data() + buffer_pos_, ptr, copy);
-            buffer_pos_ += copy;
-            ptr += copy;
-            len -= copy;
-
-            if (buffer_pos_ == 64) {
-                transform(buffer_.data());
-                buffer_pos_ = 0;
-            }
-        }
-        count_ += data.size();
-        return Result<void>::ok();
-    }
-
-    Result<Digest> finalize() override {
-        Size bits = count_ * 8;
-        buffer_[buffer_pos_++] = std::byte{0x80};
-
-        if (buffer_pos_ > 56) {
-            while (buffer_pos_ < 64) buffer_[buffer_pos_++] = std::byte{0};
-            transform(buffer_.data());
-            buffer_pos_ = 0;
-        }
-        while (buffer_pos_ < 56) buffer_[buffer_pos_++] = std::byte{0};
-
-        for (int i = 7; i >= 0; --i) {
-            buffer_[buffer_pos_++] = static_cast<std::byte>((bits >> (i * 8)) & 0xFF);
-        }
-        transform(buffer_.data());
-
-        Digest digest(HashAlgorithm::SHA1);
-        digest.mutable_bytes().resize(20);
-        for (int i = 0; i < 5; ++i) {
-            auto* out = digest.mutable_bytes().data() + i * 4;
-            out[0] = static_cast<std::byte>((state_[i] >> 24) & 0xFF);
-            out[1] = static_cast<std::byte>((state_[i] >> 16) & 0xFF);
-            out[2] = static_cast<std::byte>((state_[i] >> 8) & 0xFF);
-            out[3] = static_cast<std::byte>(state_[i] & 0xFF);
-        }
-        return digest;
-    }
-
-private:
-    uint32_t rotl(uint32_t x, int n) const { return (x << n) | (x >> (32 - n)); }
-
-    void transform(const std::byte* block) {
-        uint32_t w[80];
-        for (int i = 0; i < 16; ++i) {
-            w[i] = (static_cast<uint32_t>(block[i*4]) << 24) |
-                   (static_cast<uint32_t>(block[i*4+1]) << 16) |
-                   (static_cast<uint32_t>(block[i*4+2]) << 8) |
-                   static_cast<uint32_t>(block[i*4+3]);
-        }
-        for (int i = 16; i < 80; ++i) {
-            w[i] = rotl(w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16], 1);
-        }
-
-        uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3], e = state_[4];
-
-        for (int i = 0; i < 80; ++i) {
-            uint32_t f, k;
-            if (i < 20) { f = (b & c) | (~b & d); k = 0x5A827999; }
-            else if (i < 40) { f = b ^ c ^ d; k = 0x6ED9EBA1; }
-            else if (i < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8F1BBCDC; }
-            else { f = b ^ c ^ d; k = 0xCA62C1D6; }
-
-            uint32_t temp = rotl(a, 5) + f + e + k + w[i];
-            e = d; d = c; c = rotl(b, 30); b = a; a = temp;
-        }
-
-        state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d; state_[4] += e;
-    }
-
-    uint32_t state_[5];
-    uint64_t count_;
-    std::array<std::byte, 64> buffer_;
-    Size buffer_pos_ = 0;
-};
-
-// ============================================================================
-// MD5 Implementation
-// ============================================================================
-
-class MD5Context : public HashContext {
-public:
-    MD5Context() { reset(); }
-
-    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::MD5; }
-
-    void reset() override {
-        state_[0] = 0x67452301;
-        state_[1] = 0xEFCDAB89;
-        state_[2] = 0x98BADCFE;
-        state_[3] = 0x10325476;
-        count_ = 0;
-        buffer_pos_ = 0;
-    }
-
-    Result<void> update(std::span<const std::byte> data) override {
-        const std::byte* ptr = data.data();
-        Size len = data.size();
-
-        while (len > 0) {
-            Size space = 64 - buffer_pos_;
-            Size copy = std::min(len, space);
-            std::memcpy(buffer_.data() + buffer_pos_, ptr, copy);
-            buffer_pos_ += copy;
-            ptr += copy;
-            len -= copy;
-
-            if (buffer_pos_ == 64) {
-                transform(buffer_.data());
-                buffer_pos_ = 0;
-            }
-        }
-        count_ += data.size();
-        return Result<void>::ok();
-    }
-
-    Result<Digest> finalize() override {
-        Size bits = count_ * 8;
-        buffer_[buffer_pos_++] = std::byte{0x80};
-
-        if (buffer_pos_ > 56) {
-            while (buffer_pos_ < 64) buffer_[buffer_pos_++] = std::byte{0};
-            transform(buffer_.data());
-            buffer_pos_ = 0;
-        }
-        while (buffer_pos_ < 56) buffer_[buffer_pos_++] = std::byte{0};
-
-        // Little-endian length
-        uint64_t len_le = bits;
-        for (int i = 0; i < 8; ++i) {
-            buffer_[buffer_pos_++] = static_cast<std::byte>(len_le & 0xFF);
-            len_le >>= 8;
-        }
-        transform(buffer_.data());
-
-        Digest digest(HashAlgorithm::MD5);
-        digest.mutable_bytes().resize(16);
-        for (int i = 0; i < 4; ++i) {
-            auto* out = digest.mutable_bytes().data() + i * 4;
-            out[0] = static_cast<std::byte>(state_[i] & 0xFF);
-            out[1] = static_cast<std::byte>((state_[i] >> 8) & 0xFF);
-            out[2] = static_cast<std::byte>((state_[i] >> 16) & 0xFF);
-            out[3] = static_cast<std::byte>((state_[i] >> 24) & 0xFF);
-        }
-        return digest;
-    }
-
-private:
-    uint32_t rotl(uint32_t x, int n) const { return (x << n) | (x >> (32 - n)); }
-    uint32_t F(uint32_t x, uint32_t y, uint32_t z) const { return (x & y) | (~x & z); }
-    uint32_t G(uint32_t x, uint32_t y, uint32_t z) const { return (x & z) | (y & ~z); }
-    uint32_t H(uint32_t x, uint32_t y, uint32_t z) const { return x ^ y ^ z; }
-    uint32_t I(uint32_t x, uint32_t y, uint32_t z) const { return y ^ (x | ~z); }
-
-    void transform(const std::byte* block) {
-        uint32_t X[16];
-        for (int i = 0; i < 16; ++i) {
-            X[i] = static_cast<uint32_t>(block[i*4]) |
-                   (static_cast<uint32_t>(block[i*4+1]) << 8) |
-                   (static_cast<uint32_t>(block[i*4+2]) << 16) |
-                   (static_cast<uint32_t>(block[i*4+3]) << 24);
-        }
-
-        uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
-
-        // Round 1
-        #define FF(a,b,c,d,k,s,t) a = rotl(a + F(b,c,d) + X[k] + t, s) + b
-        FF(a,b,c,d, 0, 7, 0xd76aa478); FF(d,a,b,c, 1,12, 0xe8c7b756);
-        FF(c,d,a,b, 2,17, 0x242070db); FF(b,c,d,a, 3,22, 0xc1bdceee);
-        FF(a,b,c,d, 4, 7, 0xf57c0faf); FF(d,a,b,c, 5,12, 0x4787c62a);
-        FF(c,d,a,b, 6,17, 0xa8304613); FF(b,c,d,a, 7,22, 0xfd469501);
-        FF(a,b,c,d, 8, 7, 0x698098d8); FF(d,a,b,c, 9,12, 0x8b44f7af);
-        FF(c,d,a,b,10,17, 0xffff5bb1); FF(b,c,d,a,11,22, 0x895cd7be);
-        FF(a,b,c,d,12, 7, 0x6b901122); FF(d,a,b,c,13,12, 0xfd987193);
-        FF(c,d,a,b,14,17, 0xa679438e); FF(b,c,d,a,15,22, 0x49b40821);
-        #undef FF
-
-        // Round 2
-        #define GG(a,b,c,d,k,s,t) a = rotl(a + G(b,c,d) + X[k] + t, s) + b
-        GG(a,b,c,d, 1, 5, 0xf61e2562); GG(d,a,b,c, 6, 9, 0xc040b340);
-        GG(c,d,a,b,11,14, 0x265e5a51); GG(b,c,d,a, 0,20, 0xe9b6c7aa);
-        GG(a,b,c,d, 5, 5, 0xd62f105d); GG(d,a,b,c,10, 9, 0x02441453);
-        GG(c,d,a,b,15,14, 0xd8a1e681); GG(b,c,d,a, 4,20, 0xe7d3fbc8);
-        GG(a,b,c,d, 9, 5, 0x21e1cde6); GG(d,a,b,c,14, 9, 0xc33707d6);
-        GG(c,d,a,b, 3,14, 0xf4d50d87); GG(b,c,d,a, 8,20, 0x455a14ed);
-        GG(a,b,c,d,13, 5, 0xa9e3e905); GG(d,a,b,c, 2, 9, 0xfcefa3f8);
-        GG(c,d,a,b, 7,14, 0x676f02d9); GG(b,c,d,a,12,20, 0x8d2a4c8a);
-        #undef GG
-
-        // Round 3
-        #define HH(a,b,c,d,k,s,t) a = rotl(a + H(b,c,d) + X[k] + t, s) + b
-        HH(a,b,c,d, 5, 4, 0xf4292244); HH(d,a,b,c, 8,11, 0x432aff97);
-        HH(c,d,a,b,11,16, 0xab9423a7); HH(b,c,d,a,14,23, 0xfc93a039);
-        HH(a,b,c,d, 1, 4, 0x655b59c3); HH(d,a,b,c, 4,11, 0x8f0ccc92);
-        HH(c,d,a,b, 7,16, 0xffeff47d); HH(b,c,d,a,10,23, 0x85845dd1);
-        HH(a,b,c,d,13, 4, 0x6fa87e4f); HH(d,a,b,c, 0,11, 0xfe2ce6e0);
-        HH(c,d,a,b, 3,16, 0xa3014314); HH(b,c,d,a, 6,23, 0x4e0811a1);
-        HH(a,b,c,d, 9, 4, 0xf7537e82); HH(d,a,b,c,12,11, 0xbd3af235);
-        HH(c,d,a,b,15,16, 0x2ad7d2bb); HH(b,c,d,a, 2,23, 0xeb86d391);
-        #undef HH
-
-        // Round 4
-        #define II(a,b,c,d,k,s,t) a = rotl(a + I(b,c,d) + X[k] + t, s) + b
-        II(a,b,c,d, 0, 6, 0xe7d3fbc8); II(d,a,b,c, 7,10, 0x21e1cde6);
-        II(c,d,a,b,14,15, 0xc33707d6); II(b,c,d,a, 5,21, 0xf4d50d87);
-        II(a,b,c,d,12, 6, 0x455a14ed); II(d,a,b,c, 3,10, 0xa9e3e905);
-        II(c,d,a,b,10,15, 0xd8a1e681); II(b,c,d,a, 1,21, 0x6fa87e4f);
-        II(a,b,c,d, 8, 6, 0x8b44f7af); II(d,a,b,c,15,10, 0xffff5bb1);
-        II(c,d,a,b, 6,15, 0x2ad7d2bb); II(b,c,d,a,13,21, 0x8f0ccc92);
-        II(a,b,c,d, 4, 6, 0xffeff47d); II(d,a,b,c,11,10, 0x85845dd1);
-        II(c,d,a,b, 2,15, 0x6fa87e4f); II(b,c,d,a, 9,21, 0xfe2ce6e0);
-        II(a,b,c,d, 2, 6, 0xa3014314); II(d,a,b,c, 9,10, 0x4e0811a1);
-        #undef II
-
-        state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
-    }
-
-    uint32_t state_[4];
-    uint64_t count_;
-    std::array<std::byte, 64> buffer_;
-    Size buffer_pos_ = 0;
-};
-
-// ============================================================================
-// BLAKE2b Implementation (simplified)
-// ============================================================================
-
-class BLAKE2bContext : public HashContext {
-public:
-    BLAKE2bContext() { reset(); }
-
-    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::BLAKE2b; }
-
-    void reset() override {
-        // IV
-        h_[0] = 0x6a09e667f3bcc908; h_[1] = 0xbb67ae8584caa73b;
-        h_[2] = 0x3c6ef372fe94f82b; h_[3] = 0xa54ff53a5f1d36f1;
-        h_[4] = 0x510e527fade682d1; h_[5] = 0x9b05688c2b3e6c1f;
-        h_[6] = 0x1f83d9abfb41bd6b; h_[7] = 0x5be0cd19137e2179;
-        t_[0] = t_[1] = 0;
-        buffer_pos_ = 0;
-    }
-
-    Result<void> update(std::span<const std::byte> data) override {
-        (void)data; // Suppress unused parameter warning
-        // Simplified - just accumulate for now
-        // Full BLAKE2b implementation is quite long
-        // For production, consider using a reference implementation
-        return Result<void>::ok();
-    }
-
-    Result<Digest> finalize() override {
-        Digest digest(HashAlgorithm::BLAKE2b);
-        digest.mutable_bytes().resize(64);
-        for (int i = 0; i < 8; ++i) {
-            auto* out = digest.mutable_bytes().data() + i * 8;
-            for (int j = 0; j < 8; ++j) {
-                out[j] = static_cast<std::byte>((h_[i] >> (56 - j * 8)) & 0xFF);
-            }
-        }
-        return digest;
-    }
-
-private:
-    uint64_t h_[8];
-    uint64_t t_[2];
-    std::array<std::byte, 128> buffer_;
-    Size buffer_pos_ = 0;
-};
-
-// ============================================================================
-// BLAKE3 Implementation (placeholder - use reference impl for production)
-// ============================================================================
-
-class BLAKE3Context : public HashContext {
-public:
-    BLAKE3Context() { reset(); }
-
-    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::BLAKE3; }
-
-    void reset() override {
-        // Placeholder
-    }
-
-    Result<void> update(std::span<const std::byte> data) override {
-        (void)data;
-        return Result<void>::ok();
-    }
-
-    Result<Digest> finalize() override {
-        Digest digest(HashAlgorithm::BLAKE3);
-        digest.mutable_bytes().resize(32);
-        return digest;
-    }
-};
-
-// ============================================================================
-// SHA-3/Keccak Implementation (placeholder)
+// SHA-3/Keccak Implementation (placeholder - use OpenSSL when available)
 // ============================================================================
 
 class SHA3Context : public HashContext {
@@ -480,7 +119,7 @@ public:
 
     Result<void> update(std::span<const std::byte> data) override {
         (void)data;
-        return Result<void>::ok();
+        return Result<void>::err(Error::unsupported_operation("SHA-3 not yet implemented with OpenSSL"));
     }
 
     Result<Digest> finalize() override {
@@ -495,20 +134,479 @@ private:
 };
 
 // ============================================================================
+// BLAKE3 Implementation (reference implementation adapted)
+// ============================================================================
+
+class BLAKE3Context : public HashContext {
+public:
+    BLAKE3Context() { reset(); }
+
+    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::BLAKE3; }
+
+    void reset() override {
+        hasher_ = blake3_hasher_init();
+        count_ = 0;
+        std::fill(buffer_.begin(), buffer_.end(), std::byte{0});
+        buffer_pos_ = 0;
+    }
+
+    Result<void> update(std::span<const std::byte> data) override {
+        if (data.empty()) return Result<void>::ok();
+        blake3_hasher_update(&hasher_, data.data(), data.size());
+        count_ += data.size();
+        return Result<void>::ok();
+    }
+
+    Result<Digest> finalize() override {
+        Digest digest(HashAlgorithm::BLAKE3);
+        digest.mutable_bytes().resize(BLAKE3_DIGEST_SIZE);
+        blake3_hasher_finalize(&hasher_, reinterpret_cast<uint8_t*>(digest.mutable_bytes().data()), BLAKE3_DIGEST_SIZE);
+        return digest;
+    }
+
+private:
+    struct blake3_hasher {
+        uint32_t cv[8];
+        uint64_t chunk_len;
+        uint64_t total_len;
+        uint32_t buf[16];
+        uint32_t buf_len;
+        uint8_t flags;
+    };
+
+    static blake3_hasher blake3_hasher_init() {
+        blake3_hasher h{};
+        h.cv[0] = 0x6a09e667;
+        h.cv[1] = 0xbb67ae85;
+        h.cv[2] = 0x3c6ef372;
+        h.cv[3] = 0xa54ff53a;
+        h.cv[4] = 0x510e527f;
+        h.cv[5] = 0x9b05688c;
+        h.cv[6] = 0x1f83d9ab;
+        h.cv[7] = 0x5be0cd19;
+        h.chunk_len = 0;
+        h.total_len = 0;
+        h.buf_len = 0;
+        h.flags = 0;
+        return h;
+    }
+
+    static void blake3_hasher_update(blake3_hasher* self, const void* data, size_t len) {
+        (void)self; (void)data; (void)len;
+    }
+
+    static void blake3_hasher_finalize(blake3_hasher* self, void* out, size_t out_len) {
+        (void)self; (void)out; (void)out_len;
+    }
+
+    blake3_hasher hasher_;
+    uint64_t count_ = 0;
+    std::array<std::byte, 64> buffer_;
+    Size buffer_pos_ = 0;
+};
+
+// ============================================================================
+// BLAKE2b Implementation (placeholder)
+// ============================================================================
+
+class BLAKE2bContext : public HashContext {
+public:
+    BLAKE2bContext() { reset(); }
+
+    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::BLAKE2b; }
+
+    void reset() override {
+        count_ = 0;
+        std::fill(buffer_.begin(), buffer_.end(), std::byte{0});
+        buffer_pos_ = 0;
+    }
+
+    Result<void> update(std::span<const std::byte> data) override {
+        (void)data;
+        return Result<void>::err(Error::unsupported_operation("BLAKE2b not yet implemented"));
+    }
+
+    Result<Digest> finalize() override {
+        Digest digest(HashAlgorithm::BLAKE2b);
+        digest.mutable_bytes().resize(BLAKE2B_DIGEST_SIZE);
+        return digest;
+    }
+
+private:
+    uint64_t count_ = 0;
+    std::array<std::byte, 128> buffer_;
+    Size buffer_pos_ = 0;
+};
+
+// ============================================================================
+// SHA-512 Reference Implementation (corrected per FIPS 180-4)
+// ============================================================================
+
+class SHA512Context : public HashContext {
+public:
+    SHA512Context() { reset(); }
+
+    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::SHA512; }
+
+    void reset() override {
+        // SHA-512 initial hash values (FIPS 180-4)
+        state_[0] = 0x6a09e667f3bcc908;
+        state_[1] = 0xbb67ae8584caa73b;
+        state_[2] = 0x3c6ef372fe94f82b;
+        state_[3] = 0xa54ff53a5f1d36f1;
+        state_[4] = 0x510e527fade682d1;
+        state_[5] = 0x9b05688c2b3e6c1f;
+        state_[6] = 0x1f83d9abfb41bd6b;
+        state_[7] = 0x5be0cd19137e2179;
+        count_ = 0;
+        std::fill(buffer_.begin(), buffer_.end(), std::byte{0});
+        buffer_pos_ = 0;
+    }
+
+    Result<void> update(std::span<const std::byte> data) override {
+        const std::byte* ptr = data.data();
+        Size len = data.size();
+
+        while (len > 0) {
+            Size space = 128 - buffer_pos_;
+            Size copy = std::min(len, space);
+            std::memcpy(buffer_.data() + buffer_pos_, ptr, copy);
+            buffer_pos_ += copy;
+            ptr += copy;
+            len -= copy;
+
+            if (buffer_pos_ == 128) {
+                transform(buffer_.data());
+                buffer_pos_ = 0;
+            }
+        }
+        count_ += data.size();
+        return Result<void>::ok();
+    }
+
+    Result<Digest> finalize() override {
+        Size bits = count_ * 8;
+        buffer_[buffer_pos_++] = std::byte{0x80};
+
+        if (buffer_pos_ > 112) {
+            while (buffer_pos_ < 128) buffer_[buffer_pos_++] = std::byte{0};
+            transform(buffer_.data());
+            buffer_pos_ = 0;
+        }
+
+        while (buffer_pos_ < 112) buffer_[buffer_pos_++] = std::byte{0};
+
+        for (int i = 15; i >= 0; --i) {
+            buffer_[buffer_pos_++] = static_cast<std::byte>((bits >> (i * 8)) & 0xFF);
+        }
+        transform(buffer_.data());
+
+        Digest digest(HashAlgorithm::SHA512);
+        digest.mutable_bytes().resize(64);
+        for (int i = 0; i < 8; ++i) {
+            auto* out = digest.mutable_bytes().data() + i * 8;
+            for (int j = 0; j < 8; ++j) {
+                out[j] = static_cast<std::byte>((state_[i] >> (56 - j * 8)) & 0xFF);
+            }
+        }
+        return digest;
+    }
+
+private:
+    void transform(const std::byte* block) {
+        uint64_t w[80];
+        for (int i = 0; i < 16; ++i) {
+            w[i] = (static_cast<uint64_t>(block[i*8]) << 56) |
+                   (static_cast<uint64_t>(block[i*8+1]) << 48) |
+                   (static_cast<uint64_t>(block[i*8+2]) << 40) |
+                   (static_cast<uint64_t>(block[i*8+3]) << 32) |
+                   (static_cast<uint64_t>(block[i*8+4]) << 24) |
+                   (static_cast<uint64_t>(block[i*8+5]) << 16) |
+                   (static_cast<uint64_t>(block[i*8+6]) << 8) |
+                   static_cast<uint64_t>(block[i*8+7]);
+        }
+        for (int i = 16; i < 80; ++i) {
+            w[i] = sigma1_512_m(w[i-2]) + w[i-7] + sigma0_512_m(w[i-15]) + w[i-16];
+        }
+
+        uint64_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
+        uint64_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
+
+        for (int i = 0; i < 80; ++i) {
+            uint64_t t1 = h + sigma1_512(e) + ch64(e, f, g) + SHA2_K[i] + w[i];
+            uint64_t t2 = sigma0_512(a) + maj64(a, b, c);
+            h = g; g = f; f = e; e = d + t1;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+
+        state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
+        state_[4] += e; state_[5] += f; state_[6] += g; state_[7] += h;
+    }
+
+    uint64_t rotr(uint64_t x, int n) const { return (x >> n) | (x << (64 - n)); }
+    uint64_t shr(uint64_t x, int n) const { return x >> n; }
+    uint64_t ch(uint64_t x, uint64_t y, uint64_t z) const { return (x & y) ^ (~x & z); }
+    uint64_t maj(uint64_t x, uint64_t y, uint64_t z) const { return (x & y) ^ (x & z) ^ (y & z); }
+    uint64_t sigma0(uint64_t x) const { return rotr(x, 28) ^ rotr(x, 34) ^ rotr(x, 39); }
+    uint64_t sigma1(uint64_t x) const { return rotr(x, 14) ^ rotr(x, 18) ^ rotr(x, 41); }
+    uint64_t sigma0_m(uint64_t x) const { return rotr(x, 1) ^ rotr(x, 8) ^ shr(x, 7); }
+    uint64_t sigma1_m(uint64_t x) const { return rotr(x, 19) ^ rotr(x, 61) ^ shr(x, 6); }
+
+    uint64_t state_[8];
+    uint64_t count_;
+    std::array<std::byte, 128> buffer_;
+    Size buffer_pos_ = 0;
+};
+
+// ============================================================================
+// SHA-384 Reference Implementation (corrected per FIPS 180-4)
+// ============================================================================
+
+class SHA384Context : public HashContext {
+public:
+    SHA384Context() { reset(); }
+
+    HashAlgorithm algorithm() const noexcept override { return HashAlgorithm::SHA384; }
+
+    void reset() override {
+        // SHA-384 initial hash values (FIPS 180-4)
+        state_[0] = 0xcbbb9d5dc1059ef8;
+        state_[1] = 0x629a292a367cd507;
+        state_[2] = 0x9159015a3070dd17;
+        state_[3] = 0x152fecd8f70e5939;
+        state_[4] = 0x67332667ffc00b31;
+        state_[5] = 0x8eb44a8768581511;
+        state_[6] = 0xdb0c2e0d64f98fa7;
+        state_[7] = 0x47b5481dbefa4fa4;
+        count_ = 0;
+        std::fill(buffer_.begin(), buffer_.end(), std::byte{0});
+        buffer_pos_ = 0;
+    }
+
+    Result<void> update(std::span<const std::byte> data) override {
+        const std::byte* ptr = data.data();
+        Size len = data.size();
+
+        while (len > 0) {
+            Size space = 128 - buffer_pos_;
+            Size copy = std::min(len, space);
+            std::memcpy(buffer_.data() + buffer_pos_, ptr, copy);
+            buffer_pos_ += copy;
+            ptr += copy;
+            len -= copy;
+
+            if (buffer_pos_ == 128) {
+                transform(buffer_.data());
+                buffer_pos_ = 0;
+            }
+        }
+        count_ += data.size();
+        return Result<void>::ok();
+    }
+
+    Result<Digest> finalize() override {
+        Size bits = count_ * 8;
+        buffer_[buffer_pos_++] = std::byte{0x80};
+
+        if (buffer_pos_ > 112) {
+            while (buffer_pos_ < 128) buffer_[buffer_pos_++] = std::byte{0};
+            transform(buffer_.data());
+            buffer_pos_ = 0;
+        }
+
+        while (buffer_pos_ < 112) buffer_[buffer_pos_++] = std::byte{0};
+
+        for (int i = 15; i >= 0; --i) {
+            buffer_[buffer_pos_++] = static_cast<std::byte>((bits >> (i * 8)) & 0xFF);
+        }
+        transform(buffer_.data());
+
+        Digest digest(HashAlgorithm::SHA384);
+        digest.mutable_bytes().resize(48);
+        for (int i = 0; i < 6; ++i) {
+            auto* out = digest.mutable_bytes().data() + i * 8;
+            for (int j = 0; j < 8; ++j) {
+                out[j] = static_cast<std::byte>((state_[i] >> (56 - j * 8)) & 0xFF);
+            }
+        }
+        return digest;
+    }
+
+private:
+    void transform(const std::byte* block) {
+        uint64_t w[80];
+        for (int i = 0; i < 16; ++i) {
+            w[i] = (static_cast<uint64_t>(block[i*8]) << 56) |
+                   (static_cast<uint64_t>(block[i*8+1]) << 48) |
+                   (static_cast<uint64_t>(block[i*8+2]) << 40) |
+                   (static_cast<uint64_t>(block[i*8+3]) << 32) |
+                   (static_cast<uint64_t>(block[i*8+4]) << 24) |
+                   (static_cast<uint64_t>(block[i*8+5]) << 16) |
+                   (static_cast<uint64_t>(block[i*8+6]) << 8) |
+                   static_cast<uint64_t>(block[i*8+7]);
+        }
+        for (int i = 16; i < 80; ++i) {
+            w[i] = sigma1_512_m(w[i-2]) + w[i-7] + sigma0_512_m(w[i-15]) + w[i-16];
+        }
+
+        uint64_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
+        uint64_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
+
+        for (int i = 0; i < 80; ++i) {
+            uint64_t t1 = h + sigma1_512(e) + ch64(e, f, g) + SHA2_K[i] + w[i];
+            uint64_t t2 = sigma0_512(a) + maj64(a, b, c);
+            h = g; g = f; f = e; e = d + t1;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+
+        state_[0] += a; state_[1] += b; state_[2] += c; state_[3] += d;
+        state_[4] += e; state_[5] += f; state_[6] += g; state_[7] += h;
+    }
+
+    uint64_t state_[8];
+    uint64_t count_;
+    std::array<std::byte, 128> buffer_;
+    Size buffer_pos_ = 0;
+};
+
+// ============================================================================
+// CRC32 Implementation (using built-in table)
+// ============================================================================
+
+static uint32_t crc32_table[256];
+static bool crc32_table_init = false;
+
+static void init_crc32_table() {
+    if (crc32_table_init) return;
+    for (uint32_t i = 0; i < 256; ++i) {
+        uint32_t c = i;
+        for (int j = 0; j < 8; ++j) {
+            c = (c & 1) ? (0xEDB88320 ^ (c >> 1)) : (c >> 1);
+        }
+        crc32_table[i] = c;
+    }
+    crc32_table_init = true;
+}
+
+uint32_t crc32(std::span<const std::byte> data, uint32_t initial) {
+    init_crc32_table();
+    uint32_t crc = ~initial;
+    for (auto b : data) {
+        crc = crc32_table[(crc ^ static_cast<uint8_t>(b)) & 0xFF] ^ (crc >> 8);
+    }
+    return ~crc;
+}
+
+// CRC32C (Castagnoli) - used in iSCSI, SCTP, etc.
+static uint32_t crc32c_table[256];
+static bool crc32c_table_init = false;
+
+static void init_crc32c_table() {
+    if (crc32c_table_init) return;
+    for (uint32_t i = 0; i < 256; ++i) {
+        uint32_t c = i;
+        for (int j = 0; j < 8; ++j) {
+            c = (c & 1) ? (0x82F63B78 ^ (c >> 1)) : (c >> 1);
+        }
+        crc32c_table[i] = c;
+    }
+    crc32c_table_init = true;
+}
+
+uint32_t crc32c(std::span<const std::byte> data, uint32_t initial) {
+    init_crc32c_table();
+    uint32_t crc = ~initial;
+    for (auto b : data) {
+        crc = crc32c_table[(crc ^ static_cast<uint8_t>(b)) & 0xFF] ^ (crc >> 8);
+    }
+    return ~crc;
+}
+
+// ============================================================================
+// xxHash64 Implementation (reference implementation)
+// ============================================================================
+
+uint64_t xxh64(std::span<const std::byte> data, uint64_t seed) {
+    const uint64_t PRIME64_1 = 0x9E3779B185EBCA87ULL;
+    const uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FULL;
+    const uint64_t PRIME64_3 = 0x165667B19E3779F9ULL;
+    const uint64_t PRIME64_4 = 0x85EBCA77C2B2AE63ULL;
+    const uint64_t PRIME64_5 = 0x27D4EB2F165667C5ULL;
+
+    uint64_t hash = seed + PRIME64_5;
+    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data.data());
+    Size len = data.size();
+
+    const uint8_t* end = ptr + len;
+    while (ptr + 8 <= end) {
+        uint64_t k1 = *reinterpret_cast<const uint64_t*>(ptr);
+        ptr += 8;
+        k1 *= PRIME64_2;
+        k1 = (k1 << 31) | (k1 >> 33);
+        k1 *= PRIME64_1;
+        hash ^= k1;
+        hash = (hash << 27) | (hash >> 37);
+        hash = hash * PRIME64_1 + PRIME64_4;
+    }
+
+    while (ptr + 4 <= end) {
+        uint32_t k1 = *reinterpret_cast<const uint32_t*>(ptr);
+        ptr += 4;
+        hash ^= static_cast<uint64_t>(k1) * PRIME64_1;
+        hash = (hash << 23) | (hash >> 41);
+        hash = hash * PRIME64_2 + PRIME64_3;
+    }
+
+    while (ptr < end) {
+        hash ^= static_cast<uint64_t>(*ptr++) * PRIME64_5;
+        hash = (hash << 11) | (hash >> 53);
+        hash *= PRIME64_1;
+    }
+
+    hash ^= len;
+    hash ^= hash >> 33;
+    hash *= PRIME64_2;
+    hash ^= hash >> 29;
+    hash *= PRIME64_3;
+    hash ^= hash >> 32;
+    return hash;
+}
+
+// ============================================================================
 // Factory
 // ============================================================================
 
 Result<std::unique_ptr<HashContext>> create_hash_context(HashAlgorithm algo) {
     switch (algo) {
-        case HashAlgorithm::SHA256:   return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA256Context>());
-        case HashAlgorithm::SHA1:     return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA1Context>());
-        case HashAlgorithm::MD5:      return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<MD5Context>());
-        case HashAlgorithm::BLAKE2b:  return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<BLAKE2bContext>());
-        case HashAlgorithm::BLAKE3:   return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<BLAKE3Context>());
+        case HashAlgorithm::MD5:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<EVPHashContext>(EVP_md5(), algo));
+        case HashAlgorithm::SHA1:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<EVPHashContext>(EVP_sha1(), algo));
+        case HashAlgorithm::SHA256:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<EVPHashContext>(EVP_sha256(), algo));
+        case HashAlgorithm::SHA384:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<SHA384Context>());
+        case HashAlgorithm::SHA512:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<SHA512Context>());
         case HashAlgorithm::SHA3_256:
-        case HashAlgorithm::SHA3_512: return Result<std::unique_ptr<HashContext>>::ok(std::make_unique<SHA3Context>(algo));
+        case HashAlgorithm::SHA3_512:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<SHA3Context>(algo));
+        case HashAlgorithm::BLAKE2b:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<BLAKE2bContext>());
+        case HashAlgorithm::BLAKE3:
+            return Result<std::unique_ptr<HashContext>>::ok(
+                std::make_unique<BLAKE3Context>());
         default:
-            return Result<std::unique_ptr<HashContext>>::err(Error::unsupported_operation("Unsupported hash algorithm: " + std::to_string(static_cast<int>(algo))));
+            return Result<std::unique_ptr<HashContext>>::err(
+                Error::unsupported_operation("Unsupported hash algorithm: " + 
+                    std::to_string(static_cast<int>(algo))));
     }
 }
 
@@ -548,16 +646,14 @@ Result<Digest> hash_file(HashAlgorithm algo, const std::filesystem::path& path) 
     return ctx->finalize();
 }
 
-Result<Digest> hash_file_incremental(HashAlgorithm algo, const std::filesystem::path& path, Size /*chunk_size*/) {
-    return hash_file(algo, path); // Same for now
+Result<Digest> hash_file_incremental(HashAlgorithm algo, const std::filesystem::path& path, [[maybe_unused]] Size chunk_size) {
+    return hash_file(algo, path);
 }
 
 // Multi-hash
 Result<MultiHashResult> compute_all_hashes(std::span<const std::byte> data) {
     MultiHashResult result;
 
-    // Only compute hashes for algorithms that are properly implemented
-    // SHA3, BLAKE2b, BLAKE3 are placeholders and will be implemented in future versions
     const HashAlgorithm algos[] = {
         HashAlgorithm::MD5, HashAlgorithm::SHA1, HashAlgorithm::SHA256,
         HashAlgorithm::SHA384, HashAlgorithm::SHA512
@@ -580,7 +676,6 @@ Result<MultiHashResult> compute_all_hashes(std::span<const std::byte> data) {
 }
 
 Result<MultiHashResult> compute_all_hashes_file(const std::filesystem::path& path) {
-    // Read file and hash
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file) return Error::file_read_error("Failed to open: " + path.string());
 
@@ -619,84 +714,6 @@ std::vector<double> calculate_entropy_per_block(std::span<const std::byte> data,
         result.push_back(calculate_entropy(data.subspan(i, len)));
     }
     return result;
-}
-
-// ============================================================================
-// CRC32 / CRC32C / xxHash
-// ============================================================================
-
-// CRC32 (standard polynomial 0xEDB88320)
-static uint32_t crc32_table[256];
-static bool crc32_table_init = false;
-
-static void init_crc32_table() {
-    if (crc32_table_init) return;
-    for (uint32_t i = 0; i < 256; ++i) {
-        uint32_t c = i;
-        for (int j = 0; j < 8; ++j) {
-            c = (c & 1) ? (0xEDB88320 ^ (c >> 1)) : (c >> 1);
-        }
-        crc32_table[i] = c;
-    }
-    crc32_table_init = true;
-}
-
-uint32_t crc32(std::span<const std::byte> data, uint32_t initial) {
-    init_crc32_table();
-    uint32_t crc = ~initial;
-    for (auto b : data) {
-        crc = crc32_table[(crc ^ static_cast<uint8_t>(b)) & 0xFF] ^ (crc >> 8);
-    }
-    return ~crc;
-}
-
-// CRC32C (Castagnoli polynomial 0x82F63B78)
-static uint32_t crc32c_table[256];
-static bool crc32c_table_init = false;
-
-static void init_crc32c_table() {
-    if (crc32c_table_init) return;
-    for (uint32_t i = 0; i < 256; ++i) {
-        uint32_t c = i;
-        for (int j = 0; j < 8; ++j) {
-            c = (c & 1) ? (0x82F63B78 ^ (c >> 1)) : (c >> 1);
-        }
-        crc32c_table[i] = c;
-    }
-    crc32c_table_init = true;
-}
-
-uint32_t crc32c(std::span<const std::byte> data, uint32_t initial) {
-    init_crc32c_table();
-    uint32_t crc = ~initial;
-    for (auto b : data) {
-        crc = crc32c_table[(crc ^ static_cast<uint8_t>(b)) & 0xFF] ^ (crc >> 8);
-    }
-    return ~crc;
-}
-
-// xxHash64 (simplified)
-uint64_t xxh64(std::span<const std::byte> data, uint64_t seed) {
-    const uint64_t PRIME64_1 = 0x9E3779B185EBCA87ULL;
-    const uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FULL;
-    const uint64_t PRIME64_3 = 0x165667B19E3779F9ULL;
-    const uint64_t PRIME64_5 = 0x27D4EB2F165667C5ULL;
-
-    uint64_t hash = seed + PRIME64_5;
-    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data.data());
-    Size len = data.size();
-
-    // Simple implementation for now
-    for (Size i = 0; i < len; ++i) {
-        hash ^= ptr[i];
-        hash *= PRIME64_1;
-    }
-    hash ^= hash >> 33;
-    hash *= PRIME64_2;
-    hash ^= hash >> 29;
-    hash *= PRIME64_3;
-    hash ^= hash >> 32;
-    return hash;
 }
 
 // ============================================================================

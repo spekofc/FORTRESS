@@ -1,5 +1,7 @@
 # FORTRESS Core Library
 
+find_package(OpenSSL REQUIRED)
+
 add_library(fortress_core STATIC
     error.cpp
     file_utils.cpp
@@ -9,6 +11,8 @@ add_library(fortress_core STATIC
 target_link_libraries(fortress_core PUBLIC
     LLVMSupport
     LLVMDemangle
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 target_include_directories(fortress_core PUBLIC
