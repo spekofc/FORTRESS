@@ -19,13 +19,13 @@ Diferente de packers tradicionais ou ofuscadores simples, o FORTRESS fornece um 
 
 | Categoria | Funcionalidade | Status |
 |-----------|----------------|--------|
-| **Análise Binária** | Parsing PE32/PE32+ | ✅ Implementado |
-| | Parsing ELF32/ELF64 | ✅ Implementado |
-| | Parsing Mach-O 32/64-bit + Fat binaries | ✅ Implementado |
-| | Análise de seções, símbolos, imports/exports | ✅ Implementado |
-| | Parsing de relocações | ✅ Implementado |
-| | Descoberta de funções (símbolos + heurísticas) | ✅ Implementado |
-| **Motor de Virtualização** | Arquiteturas VM heterogêneas | 🔄 Em Progresso |
+| **Análise Binária** | Parsing PE32/PE32+ | 🔄 Em Progresso |
+| | Parsing ELF32/ELF64 | 🔄 Em Progresso |
+| | Parsing Mach-O 32/64-bit + Fat binaries | 🔄 Em Progresso |
+| | Análise de seções, símbolos, imports/exports | 🔄 Em Progresso |
+| | Parsing de relocações | 🔄 Em Progresso |
+| | Descoberta de funções (símbolos + heurísticas) | 🔄 Em Progresso |
+| **Motor de Virtualização** | Arquiteturas VM heterogêneas | 📋 Planejado |
 | | Seleção de VM por função | 📋 Planejado |
 | | Diversificação de opcodes por build | 📋 Planejado |
 | | Geração de handlers e estratégias de dispatch | 📋 Planejado |
@@ -159,8 +159,20 @@ fortress analyze -i exemplo.exe --imports
 
   Hashes:
     SHA256: a1b2c3d4e5f6...
-    BLAKE3: 9f8e7d6c5b4a...
+    SHA384: fdbd8e75a67f...
+    SHA512: 309ecc489c12...
 ```
+
+**Status do Módulo de Hashing:**
+- **Implementado (OpenSSL EVP)**: MD5, SHA-1, SHA-256, SHA-384, SHA-512
+- **Implementado (Referência)**: CRC32, CRC32C, xxHash64, Entropia
+- **OpenSSL EVP (quando disponível)**: SHA3-256, SHA3-512, BLAKE2b
+- **Não Implementado**: BLAKE3 (planejado)
+
+**Resultados dos Testes (Debug & Release):**
+- Testes Core: 24/24 passando
+- Testes CoreHash: 12/12 passando (MD5 RFC 1321: 7/7 vetores, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropia, MultiHash)
+- Algoritmos não suportados (SHA-3, BLAKE2b, BLAKE3): retornam erro `UnsupportedOperation` explícito
 
 ---
 
@@ -201,7 +213,7 @@ FORTRESS/
 | Fase | Foco | Status |
 |------|------|--------|
 | **Fase 1** | Pesquisa e Arquitetura | ✅ Completa |
-| **Fase 2** | Binary Analyzer Core | 🔄 Em Progresso |
+| **Fase 2** | Binary Analyzer Core | 🔄 Em Progresso (Parsers precisam correções de crashes) |
 | **Fase 3** | Análise Estática Avançada (CFG, Call Graph, XREF) | 📋 Planejado |
 | **Fase 4** | Motor de Virtualização | 📋 Planejado |
 | **Fase 5** | Motor de Transformação | 📋 Planejado |

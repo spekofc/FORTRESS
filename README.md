@@ -19,13 +19,13 @@ Unlike traditional packers or simple obfuscators, FORTRESS provides a **compiler
 
 | Category | Feature | Status |
 |----------|---------|--------|
-| **Binary Analysis** | PE32/PE32+ parsing | ✅ Implemented |
-| | ELF32/ELF64 parsing | ✅ Implemented |
-| | Mach-O 32/64-bit + Fat binaries | ✅ Implemented |
-| | Section, symbol, import/export analysis | ✅ Implemented |
-| | Relocation parsing | ✅ Implemented |
-| | Function discovery (symbols + heuristics) | ✅ Implemented |
-| **Virtualization Engine** | Heterogeneous VM architectures | 🔄 In Progress |
+| **Binary Analysis** | PE32/PE32+ parsing | 🔄 In Progress |
+| | ELF32/ELF64 parsing | 🔄 In Progress |
+| | Mach-O 32/64-bit + Fat binaries | 🔄 In Progress |
+| | Section, symbol, import/export analysis | 🔄 In Progress |
+| | Relocation parsing | 🔄 In Progress |
+| | Function discovery (symbols + heuristics) | 🔄 In Progress |
+| **Virtualization Engine** | Heterogeneous VM architectures | 📋 Planned |
 | | Per-function VM selection | 📋 Planned |
 | | Per-build opcode diversification | 📋 Planned |
 | | Handler generation & dispatcher strategies | 📋 Planned |
@@ -164,6 +164,17 @@ fortress analyze -i sample.exe --imports
     # BLAKE3: Not implemented (planned)
 ```
 
+**Hashing Module Status:**
+- **Implemented (OpenSSL EVP)**: MD5, SHA-1, SHA-256, SHA-384, SHA-512
+- **Implemented (Reference)**: CRC32, CRC32C, xxHash64, Entropy
+- **OpenSSL EVP (when available)**: SHA3-256, SHA3-512, BLAKE2b
+- **Not Implemented**: BLAKE3 (planned)
+
+**Test Results (Debug & Release):**
+- Core tests: 24/24 passing
+- CoreHash tests: 12/12 passing (MD5 RFC 1321: 7/7 vectors, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropy, MultiHash)
+- Unsupported algorithms (SHA-3, BLAKE2b, BLAKE3): return explicit `UnsupportedOperation` errors
+
 ---
 
 ## Directory Structure
@@ -203,7 +214,7 @@ FORTRESS/
 | Phase | Focus | Target |
 |-------|-------|--------|
 | **Phase 1** | Research & Architecture | ✅ Complete |
-| **Phase 2** | Binary Analyzer Core | 🔄 In Progress |
+| **Phase 2** | Binary Analyzer Core | 🔄 In Progress (Parsers need crash fixes) |
 | **Phase 3** | Advanced Static Analysis (CFG, Call Graph, XREF) | 📋 Planned |
 | **Phase 4** | Virtualization Engine | 📋 Planned |
 | **Phase 5** | Transformation Engine | 📋 Planned |
