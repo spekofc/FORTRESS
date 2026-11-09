@@ -49,11 +49,26 @@ public:
     static TypedAddress rva(uint64_t rva) noexcept { return TypedAddress(rva, AddressSpace::RVA); }
     static TypedAddress va(uint64_t va) noexcept { return TypedAddress(va, AddressSpace::VA); }
     static TypedAddress segment_va(uint64_t va) noexcept { return TypedAddress(va, AddressSpace::SegmentVA); }
+    
+    // SegmentVA with explicit segment identifier (for Mach-O)
+    // Encodes segment index in upper 16 bits, offset in lower 48 bits
+    static TypedAddress segment_va(uint16_t segment_index, uint64_t offset_in_segment) noexcept {
+        uint64_t value = (static_cast<uint64_t>(segment_index) << 48) | (offset_in_segment & 0xFFFFFFFFFFFFull);
+        return TypedAddress(value, AddressSpace::SegmentVA);
+    }
 
     // Accessors
     constexpr uint64_t value() const noexcept { return value_; }
     constexpr AddressSpace space() const noexcept { return space_; }
     constexpr bool valid() const noexcept { return space_ != AddressSpace::Invalid; }
+    
+    // SegmentVA specific accessors
+    constexpr uint16_t segment_index() const noexcept { 
+        return static_cast<uint16_t>(value_ >> 48); 
+    }
+    constexpr uint64_t segment_offset() const noexcept { 
+        return value_ & 0xFFFFFFFFFFFFull; 
+    }
 
     // Explicit conversion to raw value (use with caution)
     constexpr explicit operator uint64_t() const noexcept { return value_; }

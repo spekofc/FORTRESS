@@ -71,6 +71,11 @@ public:
                         result.error = "File offset beyond raw data in section";
                         return result;
                     }
+                    // Check if resulting RVA would exceed virtual_size
+                    if (offset_in_section >= sec.virtual_size) {
+                        result.error = "File offset maps to RVA beyond virtual size";
+                        return result;
+                    }
                     if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.rva.value()) {
                         result.error = "RVA calculation overflow";
                         return result;
@@ -86,9 +91,15 @@ public:
 
         if (from.space() == AddressSpace::RVA && to_space == AddressSpace::FileOffset) {
             for (const auto& sec : sections_) {
-                // Check if RVA falls within this section's virtual range
-                if (from.value() >= sec.rva.value() && 
-                    from.value() < sec.rva.value() + sec.virtual_size) {
+                // Check if RVA falls within this section's virtual range (overflow-safe)
+                uint64_t sec_rva = sec.rva.value();
+                uint64_t sec_virtual_size = sec.virtual_size;
+                if (sec_virtual_size > std::numeric_limits<uint64_t>::max() - sec_rva) {
+                    // Section virtual range overflows - skip
+                    continue;
+                }
+                uint64_t sec_virtual_end = sec_rva + sec_virtual_size;
+                if (from.value() >= sec_rva && from.value() < sec_virtual_end) {
                     uint64_t offset_in_section = from.value() - sec.rva.value();
                     // Only allow conversion if the data is file-backed
                     if (offset_in_section >= sec.raw_size) {

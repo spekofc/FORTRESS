@@ -7,21 +7,8 @@
 #include <vector>
 #include <optional>
 #include <limits>
-#include <variant>
 
 namespace fortress {
-
-// SegmentVA now carries segment identification for unambiguous round-trip
-struct SegmentVAAddress {
-    uint64_t offset_in_segment = 0;
-    std::string segment_name;
-    
-    bool valid() const noexcept { return !segment_name.empty(); }
-    
-    bool operator==(const SegmentVAAddress& other) const noexcept {
-        return offset_in_segment == other.offset_in_segment && segment_name == other.segment_name;
-    }
-};
 
 class MachOAddressConverter : public AddressConverter {
 public:
@@ -141,10 +128,10 @@ public:
         }
 
         // VA <-> SegmentVA (Mach-O specific: addresses within a segment)
-        // SegmentVA now carries segment name for unambiguous conversion
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::SegmentVA) {
             // Find which segment contains this VA
-            for (const auto& seg : segments_) {
+            for (size_t i = 0; i < segments_.size(); ++i) {
+                const auto& seg = segments_[i];
                 uint64_t seg_vm_start = seg.vm_address.value();
                 uint64_t seg_vm_size = seg.vm_size.value();
                 
@@ -155,11 +142,8 @@ public:
                 uint64_t seg_vm_end = seg_vm_start + seg_vm_size;
                 
                 if (from.value() >= seg_vm_start && from.value() < seg_vm_end) {
-                    // Return SegmentVA with segment identification
-                    result.address = TypedAddress::segment_va(from.value() - seg_vm_start);
-                    // Store segment name in the converter context if needed
-                    // For now, we encode the segment name in a way that can be retrieved
-                    // The actual SegmentVAAddress would be used by callers needing round-trip
+                    // Return SegmentVA with segment index encoded
+                    result.address = TypedAddress::segment_va(static_cast<uint16_t>(i), from.value() - seg.vm_address.value());
                     result.success = true;
                     return result;
                 }
@@ -169,11 +153,26 @@ public:
         }
 
         if (from.space() == AddressSpace::SegmentVA && to_space == AddressSpace::VA) {
-            // This requires knowing which segment - we use a special encoding
-            // The SegmentVA value is the offset, but we need the segment base
-            // This is a fundamental ambiguity - we require the segment context
-            // For now, return error requiring explicit segment context
-            result.error = "SegmentVA -> VA requires segment context (use SegmentVAAddress with segment_name)";
+            // Decode segment index and offset from SegmentVA
+            uint16_t segment_index = from.segment_index();
+            uint64_t offset_in_segment = from.segment_offset();
+            
+            if (segment_index >= segments_.size()) {
+                result.error = "Invalid segment index: " + std::to_string(segment_index);
+                return result;
+            }
+            
+            const auto& seg = segments_[segment_index];
+            if (offset_in_segment >= seg.vm_size.value()) {
+                result.error = "SegmentVA offset exceeds segment size";
+                return result;
+            }
+            if (offset_in_segment > std::numeric_limits<uint64_t>::max() - segments_[segment_index].vm_address.value()) {
+                result.error = "VA calculation overflow";
+                return result;
+            }
+            result.address = TypedAddress::va(segments_[segment_index].vm_address.value() + offset_in_segment);
+            result.success = true;
             return result;
         }
 
@@ -188,37 +187,6 @@ public:
         return result;
     }
 
-    // Overload for SegmentVAAddress round-trip
-    AddressConversionResult convert_segment_va(const SegmentVAAddress& from, AddressSpace to_space) const {
-        AddressConversionResult result;
-        result.success = false;
-        
-        if (to_space != AddressSpace::VA) {
-            result.error = "SegmentVAAddress can only convert to VA";
-            return result;
-        }
-        
-        // Find the segment by name
-        for (const auto& seg : segments_) {
-            if (seg.segment_name == from.segment_name) {
-                if (from.offset_in_segment >= seg.vm_size.value()) {
-                    result.error = "SegmentVA offset exceeds segment size";
-                    return result;
-                }
-                if (from.offset_in_segment > std::numeric_limits<uint64_t>::max() - seg.vm_address.value()) {
-                    result.error = "VA calculation overflow";
-                    return result;
-                }
-                result.address = TypedAddress::va(seg.vm_address.value() + from.offset_in_segment);
-                result.success = true;
-                return result;
-            }
-        }
-        
-        result.error = "Segment not found: " + from.segment_name;
-        return result;
-    }
-
     bool can_convert(AddressSpace from, AddressSpace to) const override {
         if (from == to) return true;
         
@@ -228,8 +196,9 @@ public:
             return !segments_.empty() || !sections_.empty();
         }
 
-        // VA -> SegmentVA (but not reverse without segment context)
-        if (from == AddressSpace::VA && to == AddressSpace::SegmentVA) {
+        // VA <-> SegmentVA (bidirectional now)
+        if ((from == AddressSpace::VA && to == AddressSpace::SegmentVA) ||
+            (from == AddressSpace::SegmentVA && to == AddressSpace::VA)) {
             return !segments_.empty();
         }
 
