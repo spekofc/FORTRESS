@@ -90,8 +90,13 @@ static std::vector<std::byte> create_minimal_elf64() {
     shdrs[3].sh_size = 64;
     shdrs[3].sh_addralign = 1;
 
-    // Section header string table
-    std::string shstrtab = "\0.text\0.data\0.shstrtab\0";
+    // Section header string table (with explicit length to handle embedded nulls)
+    const std::array<std::byte, 23> shstrtab = {
+        std::byte{0},           // \0
+        std::byte{'.'}, std::byte{'t'}, std::byte{'e'}, std::byte{'x'}, std::byte{'t'}, std::byte{0},  // .text\0
+        std::byte{'.'}, std::byte{'d'}, std::byte{'a'}, std::byte{'t'}, std::byte{'a'}, std::byte{0},  // .data\0
+        std::byte{'.'}, std::byte{'s'}, std::byte{'h'}, std::byte{'s'}, std::byte{'t'}, std::byte{'r'}, std::byte{'t'}, std::byte{'a'}, std::byte{'b'}, std::byte{0}  // .shstrtab\0
+    };
     std::memcpy(ptr + 0x3000, shstrtab.data(), shstrtab.size());
 
     // Fill .text with NOPs
@@ -177,7 +182,13 @@ static std::vector<std::byte> create_minimal_elf32() {
     shdrs[3].sh_size = 64;
     shdrs[3].sh_addralign = 1;
 
-    std::string shstrtab = "\0.text\0.data\0.shstrtab\0";
+    // Section header string table (with explicit length to handle embedded nulls)
+    const std::array<std::byte, 23> shstrtab = {
+        std::byte{0},           // \0
+        std::byte{'.'}, std::byte{'t'}, std::byte{'e'}, std::byte{'x'}, std::byte{'t'}, std::byte{0},  // .text\0
+        std::byte{'.'}, std::byte{'d'}, std::byte{'a'}, std::byte{'t'}, std::byte{'a'}, std::byte{0},  // .data\0
+        std::byte{'.'}, std::byte{'s'}, std::byte{'h'}, std::byte{'s'}, std::byte{'t'}, std::byte{'r'}, std::byte{'t'}, std::byte{'a'}, std::byte{'b'}, std::byte{0}  // .shstrtab\0
+    };
     std::memcpy(ptr + 0x3000, shstrtab.data(), shstrtab.size());
 
     std::memset(ptr + 0x1000, 0x90, 0x1000);
