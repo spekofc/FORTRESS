@@ -179,7 +179,8 @@ fortress analyze -i sample.exe --imports
 - CoreHash tests: 12/12 passing (MD5 RFC 1321: 7/7 vectors, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropy, MultiHash)
 - Binary Parsers: 17/17 passing (PE: 4/4, ELF: 6/6, Mach-O: 7/7)
 - Binary Analyzer: 7/7 passing
-- Analysis Data Model: 38/38 passing
+- Analysis Data Model: 72/72 passing
+- **Total: 123/123 tests passing**
 - Unsupported algorithms (SHA-3, BLAKE2b, BLAKE3): return explicit `UnsupportedOperation` errors
 
 **Release Build Status:**

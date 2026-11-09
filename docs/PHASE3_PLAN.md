@@ -61,12 +61,11 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | PEParser | 4 | ✅ 4/4 passing |
 | ELFParser | 6 | ✅ 6/6 passing |
 | MachOParser | 7 | ✅ 7/7 passing |
-| BinaryAnalyzer | 7 | ✅ 7/7 passing |
 | CoreHash | 12 | ✅ 12/12 passing |
 | CoreTypes/Error/String/File | 15 | ✅ 15/15 passing |
-| **Total** | **121/123** | **98.4% passing** |
+| **Total** | **123/123** | **100% passing** |
 
-**Known Issues**: 2 tests failing (ELF/MachO FileOffset→VA basic conversion) — tracked separately.
+**All tests passing in Debug configuration.**
 
 ### Files Added/Modified
 
