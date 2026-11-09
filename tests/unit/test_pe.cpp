@@ -8,7 +8,7 @@
 using namespace fortress;
 
 static std::vector<std::byte> create_minimal_pe32() {
-    std::vector<std::byte> data(512, std::byte{0});
+    std::vector<std::byte> data(0x4000, std::byte{0});
     auto* ptr = data.data();
 
     // DOS Header
@@ -111,7 +111,7 @@ static std::vector<std::byte> create_minimal_pe32() {
 }
 
 static std::vector<std::byte> create_minimal_pe64() {
-    std::vector<std::byte> data(1024, std::byte{0});
+    std::vector<std::byte> data(0x4000, std::byte{0});
     auto* ptr = data.data();
 
     // DOS Header

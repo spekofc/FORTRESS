@@ -83,10 +83,12 @@ Result<BinaryAnalysisResult> PEParser::parse(std::span<const std::byte> data) {
     result.endianness = Endianness::Little;
     result.os_abi = "windows";
     result.machine_type = std::to_string(ctx.coff_header->machine);
-    result.entry_point = ctx.is_64bit ?
+    // Entry point in PE optional header is an RVA; add ImageBase to get VA
+    uint32_t entry_rva = ctx.is_64bit ?
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader64, address_of_entry_point)) :
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader32, address_of_entry_point));
-    const std::byte* entry_ptr = rva_to_raw(ctx, static_cast<uint32_t>(result.entry_point));
+    result.entry_point = ctx.image_base + entry_rva;
+    const std::byte* entry_ptr = rva_to_raw(ctx, static_cast<uint32_t>(entry_rva));
     result.entry_point_offset = entry_ptr ?
         static_cast<Offset>(entry_ptr - ctx.base) :
         INVALID_OFFSET;
@@ -239,8 +241,12 @@ Result<void> PEParser::parse_sections(Context& ctx) {
     for (uint16_t i = 0; i < ctx.number_of_sections; ++i) {
         const auto& sec = ctx.sections[i];
         SectionInfo info;
-        info.name = std::string(sec.name, 8);
-        info.name = trim_copy(info.name); // Remove null padding
+        info.name = std::string(reinterpret_cast<const char*>(sec.name), 8);
+        // Remove trailing null padding from section name
+        auto null_pos = info.name.find('\0');
+        if (null_pos != std::string::npos) {
+            info.name.resize(null_pos);
+        }
 
         info.virtual_address = ctx.image_base + sec.virtual_address;
         info.virtual_size = sec.virtual_size;
