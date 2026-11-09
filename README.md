@@ -19,12 +19,16 @@ Unlike traditional packers or simple obfuscators, FORTRESS provides a **compiler
 
 | Category | Feature | Status |
 |----------|---------|--------|
-| **Binary Analysis** | PE32/PE32+ parsing | 🔄 In Progress |
-| | ELF32/ELF64 parsing | 🔄 In Progress |
-| | Mach-O 32/64-bit + Fat binaries | 🔄 In Progress |
-| | Section, symbol, import/export analysis | 🔄 In Progress |
-| | Relocation parsing | 🔄 In Progress |
-| | Function discovery (symbols + heuristics) | 🔄 In Progress |
+| **Binary Analysis** | PE32/PE32+ parsing | ✅ Complete |
+| | ELF32/ELF64 parsing | ✅ Complete |
+| | Mach-O 32/64-bit + Fat binaries | ✅ Complete |
+| | Section, symbol, import/export analysis | ✅ Complete |
+| | Relocation parsing | ✅ Complete |
+| | Function discovery (symbols + heuristics) | ✅ Complete |
+| **Analysis Data Model** | Unified normalized representation | ✅ Complete |
+| | Typed addresses (FileOffset, RVA, VA, SegmentVA) | ✅ Complete |
+| | Format-specific address converters (PE, ELF, Mach-O) | ✅ Complete |
+| | Round-trip normalization/denormalization | ✅ Complete |
 | **Virtualization Engine** | Heterogeneous VM architectures | 📋 Planned |
 | | Per-function VM selection | 📋 Planned |
 | | Per-build opcode diversification | 📋 Planned |
@@ -170,10 +174,18 @@ fortress analyze -i sample.exe --imports
 - **OpenSSL EVP (when available)**: SHA3-256, SHA3-512, BLAKE2b
 - **Not Implemented**: BLAKE3 (planned)
 
-**Test Results (Debug & Release):**
+**Test Results (Debug):**
 - Core tests: 24/24 passing
 - CoreHash tests: 12/12 passing (MD5 RFC 1321: 7/7 vectors, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropy, MultiHash)
+- Binary Parsers: 17/17 passing (PE: 4/4, ELF: 6/6, Mach-O: 7/7)
+- Binary Analyzer: 7/7 passing
+- Analysis Data Model: 38/38 passing
 - Unsupported algorithms (SHA-3, BLAKE2b, BLAKE3): return explicit `UnsupportedOperation` errors
+
+**Release Build Status:**
+- Library and CLI build successfully
+- Full test suite compilation fails due to GoogleTest internal `-Wnull-dereference` warnings with `-O3` (known third-party issue, tracked separately)
+- All production code compiles cleanly with `-Werror`
 
 ---
 
@@ -214,8 +226,9 @@ FORTRESS/
 | Phase | Focus | Target |
 |-------|-------|--------|
 | **Phase 1** | Research & Architecture | ✅ Complete |
-| **Phase 2** | Binary Analyzer Core | 🔄 In Progress (Parsers need crash fixes) |
-| **Phase 3** | Advanced Static Analysis (CFG, Call Graph, XREF) | 📋 Planned |
+| **Phase 2** | Binary Analyzer Core | ✅ Complete |
+| **Phase 3 — M1** | Analysis Data Model | ✅ Complete |
+| **Phase 3 — M2+** | Advanced Static Analysis (CFG, Call Graph, XREF) | 📋 Planned |
 | **Phase 4** | Virtualization Engine | 📋 Planned |
 | **Phase 5** | Transformation Engine | 📋 Planned |
 | **Phase 6** | Integrity & Licensing | 📋 Planned |

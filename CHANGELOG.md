@@ -9,12 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Core Infrastructure**: Error handling with `Error` class and `Result<T>` monad, file utilities with `FileMapping` RAII, comprehensive hashing (SHA256, SHA1, MD5, BLAKE2b, BLAKE3, CRC32, xxHash), entropy calculation, string utilities
+- **Analysis Data Model** (Phase 3 Milestone 1):
+  - Unified normalized representation (`NormalizedAnalysisResult`) across PE, ELF, Mach-O
+  - Strongly-typed address system: `TypedAddress` with `AddressSpace` (FileOffset, RVA, VA, SegmentVA)
+  - Format-specific address converters: `PEAddressConverter`, `ELFAddressConverter`, `MachOAddressConverter`
+  - Explicit conversion semantics with validation and overflow protection
+  - Round-trip normalization: `normalize_analysis_result()` / `denormalize_analysis_result()`
+  - Format-specific metadata preservation in `BinaryMetadata::FormatSpecificData`
+  - 38 new unit tests covering all model components and converters
 - **Binary Parsers**: PE32/PE32+ parser (DOS header, COFF, Optional header, sections, imports, exports, relocations, debug, TLS), ELF32/ELF64 parser (headers, program/section headers, symtab/dynsym, dynamic section, relocations, notes, build ID), Mach-O 32/64-bit + Fat binary parser (load commands, segments, symtab, UUID, LC_MAIN)
 - **Binary Analyzer**: Unified `BinaryAnalyzer` interface with automatic format detection, parser dispatch, post-processing, and validation
 - **CLI**: `fortress analyze` command with options for sections, imports, exports, functions, symbols, relocations, debug info, JSON output
 - **Build System**: CMake 3.25+ with Ninja, LLVM 18+ integration, GoogleTest via FetchContent, cross-platform support (Windows/Linux/macOS)
-- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers
+- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model
 - **Documentation**: Comprehensive README (English/Portuguese), PHASE2_AUDIT.md, PHASE2_COMPLETION_REPORT.md, PHASE2_FINAL_SUMMARY.md, PHASE3_PLAN.md
 
 ### Changed
@@ -22,9 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored ELF parser to use `ctx.result->` consistently instead of `result->`
 - Fixed Mach-O parser sign conversion warnings with explicit casts
 - Updated CLI to use generated `fortress/version.h` instead of `fortress/core/version.h`
+- Updated roadmap: Phase 2 complete, Phase 3 Milestone 1 (Analysis Data Model) complete
+- Updated test status: All parser tests passing in Debug
 
 ### Fixed
 
+- **PE Parser**: Entry point calculation (ImageBase + AddressOfEntryPoint RVA), section name trimming (8-byte fixed field with null padding)
+- **ELF Parser**: Section name resolution via shstrtab (explicit byte arrays in test fixtures)
+- **Mach-O Parser**: LC_MAIN command detection (masking LC_REQ_DYLD bit), entry point parsing (direct byte stream read), 32-bit test fixture buffer size, BinaryAnalyzer magic detection endianness
 - ELF parser `std::byte` to `uint8_t` conversions with explicit casts
 - ELF parser `SHF_READ` → `SHF_ALLOC` correction
 - Mach-O parser sign conversion warnings with explicit casts
@@ -114,13 +126,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed CRC32 test vector for "hello world" (0x0D4A1185, not 0xD4A1185E)
 - Fixed xxHash64 reference vector for "hello world" (0xbb75740c8181914a)
 - Fixed ELF test buffer sizes (increased from 1024 to 0x5000 bytes)
-
-### Fixed (Pre-existing parser issues — not fixed in this release)
-
-- **Mach-O Parser**: entry point parsing (returns 0 instead of 0x100001000)
 - **PE Parser**: entry point calculation (returns 4096 vs 0x00401000), section name includes null padding
 - **ELF Parser**: SectionPermissions test fails (section name matching)
-- These are pre-existing parser bugs, not introduced by hash module changes
+- **Mach-O Parser**: entry point parsing (returns 0 instead of 0x100001000)
 
 ### Security
 

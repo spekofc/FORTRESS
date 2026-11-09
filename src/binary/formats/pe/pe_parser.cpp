@@ -88,6 +88,7 @@ Result<BinaryAnalysisResult> PEParser::parse(std::span<const std::byte> data) {
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader64, address_of_entry_point)) :
         read_u32(reinterpret_cast<const std::byte*>(ctx.optional_header) + offsetof(OptionalHeader32, address_of_entry_point));
     result.entry_point = ctx.image_base + entry_rva;
+    result.image_base = ctx.image_base;
     const std::byte* entry_ptr = rva_to_raw(ctx, static_cast<uint32_t>(entry_rva));
     result.entry_point_offset = entry_ptr ?
         static_cast<Offset>(entry_ptr - ctx.base) :

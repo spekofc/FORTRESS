@@ -19,12 +19,16 @@ Diferente de packers tradicionais ou ofuscadores simples, o FORTRESS fornece um 
 
 | Categoria | Funcionalidade | Status |
 |-----------|----------------|--------|
-| **Análise Binária** | Parsing PE32/PE32+ | 🔄 Em Progresso |
-| | Parsing ELF32/ELF64 | 🔄 Em Progresso |
-| | Parsing Mach-O 32/64-bit + Fat binaries | 🔄 Em Progresso |
-| | Análise de seções, símbolos, imports/exports | 🔄 Em Progresso |
-| | Parsing de relocações | 🔄 Em Progresso |
-| | Descoberta de funções (símbolos + heurísticas) | 🔄 Em Progresso |
+| **Análise Binária** | Parsing PE32/PE32+ | ✅ Completo |
+| | Parsing ELF32/ELF64 | ✅ Completo |
+| | Parsing Mach-O 32/64-bit + Fat binaries | ✅ Completo |
+| | Análise de seções, símbolos, imports/exports | ✅ Completo |
+| | Parsing de relocações | ✅ Completo |
+| | Descoberta de funções (símbolos + heurísticas) | ✅ Completo |
+| **Modelo de Dados de Análise** | Representação normalizada unificada | ✅ Completo |
+| | Endereços tipados (FileOffset, RVA, VA, SegmentVA) | ✅ Completo |
+| | Conversores de endereço específicos (PE, ELF, Mach-O) | ✅ Completo |
+| | Normalização/desnormalização round-trip | ✅ Completo |
 | **Motor de Virtualização** | Arquiteturas VM heterogêneas | 📋 Planejado |
 | | Seleção de VM por função | 📋 Planejado |
 | | Diversificação de opcodes por build | 📋 Planejado |
@@ -169,10 +173,18 @@ fortress analyze -i exemplo.exe --imports
 - **OpenSSL EVP (quando disponível)**: SHA3-256, SHA3-512, BLAKE2b
 - **Não Implementado**: BLAKE3 (planejado)
 
-**Resultados dos Testes (Debug & Release):**
+**Resultados dos Testes (Debug):**
 - Testes Core: 24/24 passando
 - Testes CoreHash: 12/12 passando (MD5 RFC 1321: 7/7 vetores, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropia, MultiHash)
+- Parsers Binários: 17/17 passando (PE: 4/4, ELF: 6/6, Mach-O: 7/7)
+- Binary Analyzer: 7/7 passando
+- Analysis Data Model: 38/38 passando
 - Algoritmos não suportados (SHA-3, BLAKE2b, BLAKE3): retornam erro `UnsupportedOperation` explícito
+
+**Status do Build Release:**
+- Biblioteca e CLI compilam com sucesso
+- Compilação da suíte completa de testes falha devido a warnings `-Wnull-dereference` internos do GoogleTest com `-O3` (problema conhecido de terceiro, rastreado separadamente)
+- Todo código de produção compila limpo com `-Werror`
 
 ---
 
@@ -213,8 +225,9 @@ FORTRESS/
 | Fase | Foco | Status |
 |------|------|--------|
 | **Fase 1** | Pesquisa e Arquitetura | ✅ Completa |
-| **Fase 2** | Binary Analyzer Core | 🔄 Em Progresso (Parsers precisam correções de crashes) |
-| **Fase 3** | Análise Estática Avançada (CFG, Call Graph, XREF) | 📋 Planejado |
+| **Fase 2** | Binary Analyzer Core | ✅ Completa |
+| **Fase 3 — M1** | Analysis Data Model | ✅ Completa |
+| **Fase 3 — M2+** | Análise Estática Avançada (CFG, Call Graph, XREF) | 📋 Planejado |
 | **Fase 4** | Motor de Virtualização | 📋 Planejado |
 | **Fase 5** | Motor de Transformação | 📋 Planejado |
 | **Fase 6** | Integridade e Licenciamento | 📋 Planejado |

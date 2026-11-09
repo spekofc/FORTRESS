@@ -195,6 +195,9 @@ struct BinaryAnalysisResult {
     Address entry_point = 0;
     Offset entry_point_offset = INVALID_OFFSET;
 
+    // Image base (PE: ImageBase from optional header; ELF/Mach-O: base of first loadable segment)
+    Address image_base = 0;
+
     // Hashes
     MultiHashResult hashes;
 

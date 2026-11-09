@@ -731,6 +731,8 @@ Result<void> MachOParser::parse_entry_point(Context& ctx) {
             if (segname.find("__TEXT") == 0) {
                 ctx.result->entry_point = seg->vmaddr + entryoff;
                 ctx.result->entry_point_offset = seg->fileoff + entryoff;
+                // Set image_base to __TEXT segment base for address conversion
+                ctx.result->image_base = seg->vmaddr;
                 break;
             }
         }
@@ -739,6 +741,8 @@ Result<void> MachOParser::parse_entry_point(Context& ctx) {
             if (segname.find("__TEXT") == 0) {
                 ctx.result->entry_point = seg->vmaddr + entryoff;
                 ctx.result->entry_point_offset = seg->fileoff + entryoff;
+                // Set image_base to __TEXT segment base for address conversion
+                ctx.result->image_base = seg->vmaddr;
                 break;
             }
         }

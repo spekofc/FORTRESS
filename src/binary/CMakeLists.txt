@@ -2,6 +2,7 @@
 
 add_library(fortress_binary STATIC
     analysis/analyzer.cpp
+    analysis/analysis_model.cpp
     formats/pe/pe_parser.cpp
     formats/elf/elf_parser.cpp
     formats/macho/macho_parser.cpp
@@ -28,8 +29,12 @@ target_include_directories(fortress_binary PUBLIC
 install(FILES
     ../../include/fortress/binary/analysis/binary_info.h
     ../../include/fortress/binary/analysis/analyzer.h
+    ../../include/fortress/binary/analysis/analysis_model.h
     ../../include/fortress/binary/formats/pe/pe_parser.h
+    ../../include/fortress/binary/formats/pe/pe_address_converter.h
     ../../include/fortress/binary/formats/elf/elf_parser.h
+    ../../include/fortress/binary/formats/elf/elf_address_converter.h
     ../../include/fortress/binary/formats/macho/macho_parser.h
+    ../../include/fortress/binary/formats/macho/macho_address_converter.h
     DESTINATION include/fortress/binary
 )

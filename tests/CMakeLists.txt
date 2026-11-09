@@ -27,6 +27,7 @@ add_executable(fortress_tests
     unit/test_pe.cpp
     unit/test_elf.cpp
     unit/test_macho.cpp
+    unit/test_analysis_model.cpp
 )
 
 target_link_libraries(fortress_tests PRIVATE

@@ -71,6 +71,25 @@ Result<BinaryAnalysisResult> ELFParser::parse(std::span<const std::byte> data) {
     auto ph_result = parse_program_headers(ctx);
     if (!ph_result) return finish(ph_result.error());
 
+    // Compute image_base from first PT_LOAD segment (for address conversion)
+    if (ctx.phnum > 0) {
+        if (ctx.is_64bit) {
+            for (uint16_t i = 0; i < ctx.phnum; ++i) {
+                if (ctx.phdrs64[i].p_type == 1) { // PT_LOAD
+                    result.image_base = ctx.phdrs64[i].p_vaddr;
+                    break;
+                }
+            }
+        } else {
+            for (uint16_t i = 0; i < ctx.phnum; ++i) {
+                if (ctx.phdrs32[i].p_type == 1) { // PT_LOAD
+                    result.image_base = ctx.phdrs32[i].p_vaddr;
+                    break;
+                }
+            }
+        }
+    }
+
     // Parse section headers
     auto sh_result = parse_section_headers(ctx);
     if (!sh_result) return finish(sh_result.error());
