@@ -178,7 +178,10 @@ fortress analyze -i exemplo.exe --imports
 - Testes CoreHash: 12/12 passando (MD5 RFC 1321: 7/7 vetores, SHA-256, SHA-1, SHA-384, SHA-512, CRC32, CRC32C, xxHash64, Entropia, MultiHash)
 - Parsers Binários: 17/17 passando (PE: 4/4, ELF: 6/6, Mach-O: 7/7)
 - Binary Analyzer: 7/7 passando
-- Analysis Data Model: 38/38 passando
+- Binary Info: 3/3 passando
+- Analysis Data Model: 72/72 passando
+- CFG Builder: 15/15 passando
+- **Total: 138/138 testes passando**
 - Algoritmos não suportados (SHA-3, BLAKE2b, BLAKE3): retornam erro `UnsupportedOperation` explícito
 
 **Status do Build Release:**
@@ -227,7 +230,13 @@ FORTRESS/
 | **Fase 1** | Pesquisa e Arquitetura | ✅ Completa |
 | **Fase 2** | Binary Analyzer Core | ✅ Completa |
 | **Fase 3 — M1** | Analysis Data Model | ✅ Completa |
-| **Fase 3 — M2+** | Análise Estática Avançada (CFG, Call Graph, XREF) | 📋 Planejado |
+| **Fase 3 — M2** | CFG Builder (Basic Blocks, Control Flow Graph) | ✅ Completa |
+| **Fase 3 — M3** | Call Graph (Direct/Indirect calls) | 📋 Planejado |
+| **Fase 3 — M4** | XREF Database (Cross-references) | 📋 Planejado |
+| **Fase 3 — M5** | Function Refiner (Confidence levels) | 📋 Planejado |
+| **Fase 3 — M6** | String Analysis | 📋 Planejado |
+| **Fase 3 — M7** | Metrics & Coverage | 📋 Planejado |
+| **Fase 3 — M8** | CLI Integration | 📋 Planejado |
 | **Fase 4** | Motor de Virtualização | 📋 Planejado |
 | **Fase 5** | Motor de Transformação | 📋 Planejado |
 | **Fase 6** | Integridade e Licenciamento | 📋 Planejado |

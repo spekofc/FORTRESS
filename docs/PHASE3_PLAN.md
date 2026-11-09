@@ -26,7 +26,7 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | Milestone | Focus | Status | Target |
 |-----------|-------|--------|--------|
 | **M1: Analysis Data Model** | Unified normalized representation, typed addresses, format-specific converters, round-trip normalization | ✅ **Complete** | Week 1 |
-| **M2: CFG Builder** | Basic blocks, edges, JSON output | 📋 Planned | Week 2-3 |
+| **M2: CFG Builder** | Basic blocks, edges, JSON/DOT output, loop detection, dominators | ✅ **Complete** | Week 2-3 |
 | **M3: Call Graph** | Nodes, edges, resolution, DOT export | 📋 Planned | Week 3-4 |
 | **M4: XREF Database** | In-memory + SQLite, query API | 📋 Planned | Week 4-5 |
 | **M5: Function Refiner** | Boundary refinement, confidence scoring | 📋 Planned | Week 5-6 |
@@ -61,9 +61,11 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | PEParser | 4 | ✅ 4/4 passing |
 | ELFParser | 6 | ✅ 6/6 passing |
 | MachOParser | 7 | ✅ 7/7 passing |
+| BinaryInfo | 3 | ✅ 3/3 passing |
 | CoreHash | 12 | ✅ 12/12 passing |
 | CoreTypes/Error/String/File | 15 | ✅ 15/15 passing |
-| **Total** | **123/123** | **100% passing** |
+| CFGBuilderTest | 15 | ✅ 15/15 passing |
+| **Total** | **138/138** | **100% passing** |
 
 **All tests passing in Debug configuration.**
 
@@ -80,9 +82,45 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 
 ---
 
-## Milestone 2+: Advanced Static Analysis (Planned)
+## Milestone 2: CFG Builder — ✅ Complete
 
-The remaining milestones (CFG Builder, Call Graph, XREF Database, Function Refiner, String Analyzer, Metrics & Reporting, CLI Integration) remain planned for subsequent phases. See the original plan below for detailed specifications.
+### Delivered Components
+
+| Component | Description | Status |
+|-----------|-------------|--------|
+| **Leader Identification** | Entry point, branch targets, post-branch instructions as leaders | ✅ |
+| **Basic Block Construction** | Instruction grouping between leaders, metadata tracking | ✅ |
+| **Control Flow Edges** | Fallthrough, conditional/unconditional branches, calls, returns | ✅ |
+| **Indirect Branch/Call Handling** | Unresolved tracking with `is_resolved` flag | ✅ |
+| **Loop Detection** | Havlak's algorithm, natural loops, loop depth, reducibility | ✅ |
+| **Dominator Tree** | Iterative data flow, immediate dominators, dominance frontiers | ✅ |
+| **Unreachable Code** | BFS from entry block, unreachable block identification | ✅ |
+| **CFG Validation** | Structure integrity, edge consistency, reverse edge verification | ✅ |
+| **JSON Export** | CFG structure serialization with function metadata | ✅ |
+| **GraphViz DOT Export** | Visualization with color-coded edge types | ✅ |
+
+### Validation
+
+| Test Suite | Tests | Status |
+|------------|-------|--------|
+| CFGBuilderTest | 15 | ✅ 15/15 passing |
+
+**All tests passing in Debug configuration.**
+
+### Files Added/Modified
+
+| File | Change |
+|------|--------|
+| `include/fortress/binary/analysis/cfg_builder.h` | New: CFG types, builder interface, config, result |
+| `src/binary/analysis/cfg_builder.cpp` | New: implementation with stub disassembler |
+| `tests/unit/test_cfg.cpp` | 15 new unit tests |
+| `src/binary/CMakeLists.txt` | Added cfg_builder.cpp to build |
+
+---
+
+## Milestone 3+: Advanced Static Analysis (Planned)
+
+The remaining milestones (Call Graph, XREF Database, Function Refiner, String Analyzer, Metrics & Reporting, CLI Integration) remain planned for subsequent phases. See the original plan below for detailed specifications.
 
 ---
 

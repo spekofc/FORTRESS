@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CFG Builder** (Phase 3 Milestone 2):
+  - Control Flow Graph construction for binary analysis
+  - Leader identification for basic block boundaries
+  - Basic block construction from decoded instructions
+  - Control flow edges: fallthrough, conditional/unconditional branches, calls, returns
+  - Indirect branch/call handling (unresolved tracking)
+  - Loop detection using Havlak's algorithm
+  - Dominator tree computation (iterative data flow analysis)
+  - Dominance frontier calculation
+  - Unreachable code detection
+  - CFG validation (structure integrity, edge consistency)
+  - JSON serialization of CFG structure
+  - GraphViz DOT export for visualization
+  - 15 unit tests covering linear functions, conditionals, loops, calls, indirect branches, multiple returns, empty functions
 - **Analysis Data Model** (Phase 3 Milestone 1):
   - Unified normalized representation (`NormalizedAnalysisResult`) across PE, ELF, Mach-O
   - Strongly-typed address system: `TypedAddress` with `AddressSpace` (FileOffset, RVA, VA, SegmentVA)
@@ -24,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Binary Analyzer**: Unified `BinaryAnalyzer` interface with automatic format detection, parser dispatch, post-processing, and validation
 - **CLI**: `fortress analyze` command with options for sections, imports, exports, functions, symbols, relocations, debug info, JSON output
 - **Build System**: CMake 3.25+ with Ninja, LLVM 18+ integration, GoogleTest via FetchContent, cross-platform support (Windows/Linux/macOS)
-- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model (123/123 passing)
+- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model, CFG builder (138/138 passing)
 - **Documentation**: Comprehensive README (English/Portuguese), PHASE2_AUDIT.md, PHASE2_COMPLETION_REPORT.md, PHASE2_FINAL_SUMMARY.md, PHASE3_PLAN.md
 
 ### Changed
