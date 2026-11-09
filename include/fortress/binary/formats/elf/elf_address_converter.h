@@ -34,14 +34,9 @@ public:
 
         // ELF uses VA directly (no RVA concept like PE)
         // FileOffset <-> VA via segment mapping (program headers)
+        // Segments (program headers) are the authoritative mapping; sections are fallback only
         if (from.space() == AddressSpace::FileOffset && to_space == AddressSpace::VA) {
-            // Collect all matching segments
-            struct Match {
-                uint64_t va;
-            };
-            std::vector<Match> matches;
-
-            // Use program headers (segments) for mapping
+            // First try segments (program headers)
             for (const auto& seg : segments_) {
                 uint64_t seg_file_start = seg.file_offset.value();
                 uint64_t seg_file_size = seg.file_size.value();
@@ -58,10 +53,12 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    matches.push_back({seg.vm_address.value() + offset_in_segment});
+                    result.address = TypedAddress::va(seg.vm_address.value() + offset_in_segment);
+                    result.success = true;
+                    return result;
                 }
             }
-            // Fallback: try section headers
+            // Fallback: try section headers only if no segment matched
             for (const auto& sec : sections_) {
                 if (sec.contains_file_offset(from)) {
                     uint64_t offset_in_section = from.value() - sec.file_offset.value();
@@ -73,30 +70,16 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    matches.push_back({sec.virtual_address.value() + offset_in_section});
+                    result.address = TypedAddress::va(sec.virtual_address.value() + offset_in_section);
+                    result.success = true;
+                    return result;
                 }
             }
-
-            if (matches.empty()) {
-                result.error = "File offset not within any segment or section";
-                return result;
-            }
-            if (matches.size() > 1) {
-                result.error = "Ambiguous FileOffset -> VA conversion: multiple matching segments/sections";
-                return result;
-            }
-            result.address = TypedAddress::va(matches[0].va);
-            result.success = true;
+            result.error = "File offset not within any segment or section";
             return result;
         }
 
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::FileOffset) {
-            // Collect all matching segments
-            struct Match {
-                uint64_t file_offset;
-            };
-            std::vector<Match> matches;
-
             // Use program headers (segments) for mapping
             for (const auto& seg : segments_) {
                 uint64_t seg_vm_start = seg.vm_address.value();
@@ -120,10 +103,12 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    matches.push_back({seg.file_offset.value() + offset_in_segment});
+                    result.address = TypedAddress::file_offset(seg.file_offset.value() + offset_in_segment);
+                    result.success = true;
+                    return result;
                 }
             }
-            // Fallback: try section headers
+            // Fallback: try section headers only if no segment matched
             for (const auto& sec : sections_) {
                 if (sec.contains_va(from)) {
                     uint64_t offset_in_section = from.value() - sec.virtual_address.value();
@@ -136,20 +121,12 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    matches.push_back({sec.file_offset.value() + offset_in_section});
+                    result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
+                    result.success = true;
+                    return result;
                 }
             }
-
-            if (matches.empty()) {
-                result.error = "VA not within any segment or section";
-                return result;
-            }
-            if (matches.size() > 1) {
-                result.error = "Ambiguous VA -> FileOffset conversion: multiple matching segments/sections";
-                return result;
-            }
-            result.address = TypedAddress::file_offset(matches[0].file_offset);
-            result.success = true;
+            result.error = "VA not within any segment or section";
             return result;
         }
 
@@ -215,12 +192,6 @@ public:
     }
 
     void set_segments(const std::vector<SegmentMapping>& segments) {
-        // Validate p_filesz <= p_memsz for each segment
-        for (const auto& seg : segments) {
-            if (seg.file_size.value() > seg.vm_size.value()) {
-                // This will be caught at conversion time, but we can warn here
-            }
-        }
         segments_ = segments;
     }
 

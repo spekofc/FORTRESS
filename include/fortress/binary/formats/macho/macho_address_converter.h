@@ -34,14 +34,9 @@ public:
 
         // Mach-O uses VA directly (like ELF)
         // FileOffset <-> VA via segment mapping (load commands)
+        // Segments (load commands) are the authoritative mapping; sections are fallback only
         if (from.space() == AddressSpace::FileOffset && to_space == AddressSpace::VA) {
-            // Collect all matching segments
-            struct Match {
-                uint64_t va;
-                uint64_t file_offset;
-            };
-            std::vector<Match> matches;
-
+            // First try segments (load commands)
             for (const auto& seg : segments_) {
                 uint64_t seg_file_start = seg.file_offset.value();
                 uint64_t seg_file_size = seg.file_size.value();
@@ -58,11 +53,12 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    matches.push_back({seg.vm_address.value() + offset_in_segment, seg.file_offset.value() + offset_in_segment});
+                    result.address = TypedAddress::va(seg.vm_address.value() + offset_in_segment);
+                    result.success = true;
+                    return result;
                 }
             }
-            
-            // Fallback: try section mapping
+            // Fallback: try section mapping only if no segment matched
             for (const auto& sec : sections_) {
                 if (sec.contains_file_offset(from)) {
                     uint64_t offset_in_section = from.value() - sec.file_offset.value();
@@ -74,30 +70,17 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    matches.push_back({sec.virtual_address.value(), sec.file_offset.value() + offset_in_section});
+                    result.address = TypedAddress::va(sec.virtual_address.value() + offset_in_section);
+                    result.success = true;
+                    return result;
                 }
             }
-
-            if (matches.empty()) {
-                result.error = "File offset not within any segment or section";
-                return result;
-            }
-            if (matches.size() > 1) {
-                result.error = "Ambiguous FileOffset -> VA conversion: multiple matching segments/sections";
-                return result;
-            }
-            result.address = TypedAddress::va(matches[0].va);
-            result.success = true;
+            result.error = "File offset not within any segment or section";
             return result;
         }
 
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::FileOffset) {
-            // Collect all matching segments
-            struct Match {
-                uint64_t file_offset;
-            };
-            std::vector<Match> matches;
-
+            // First try segments (load commands)
             for (const auto& seg : segments_) {
                 uint64_t seg_vm_start = seg.vm_address.value();
                 uint64_t seg_vm_size = seg.vm_size.value();
@@ -120,11 +103,12 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    matches.push_back({seg.file_offset.value() + offset_in_segment});
+                    result.address = TypedAddress::file_offset(seg.file_offset.value() + offset_in_segment);
+                    result.success = true;
+                    return result;
                 }
             }
-            
-            // Fallback: try section mapping
+            // Fallback: try section mapping only if no segment matched
             for (const auto& sec : sections_) {
                 if (sec.contains_va(from)) {
                     uint64_t offset_in_section = from.value() - sec.virtual_address.value();
@@ -137,28 +121,19 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    matches.push_back({sec.file_offset.value() + offset_in_section});
+                    result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
+                    result.success = true;
+                    return result;
                 }
             }
-
-            if (matches.empty()) {
-                result.error = "VA not within any segment or section";
-                return result;
-            }
-            if (matches.size() > 1) {
-                result.error = "Ambiguous VA -> FileOffset conversion: multiple matching segments/sections";
-                return result;
-            }
-            result.address = TypedAddress::file_offset(matches[0].file_offset);
-            result.success = true;
+            result.error = "VA not within any segment or section";
             return result;
         }
 
         // VA <-> SegmentVA (Mach-O specific: addresses within a segment)
+        // Segments are authoritative; sections are fallback only
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::SegmentVA) {
             // Find which segment contains this VA
-            size_t matching_segment = segments_.size();
-            
             for (size_t i = 0; i < segments_.size(); ++i) {
                 const auto& seg = segments_[i];
                 uint64_t seg_vm_start = seg.vm_address.value();
@@ -171,29 +146,22 @@ public:
                 uint64_t seg_vm_end = seg_vm_start + seg_vm_size;
                 
                 if (from.value() >= seg_vm_start && from.value() < seg_vm_end) {
-                    if (matching_segment != segments_.size()) {
-                        result.error = "Ambiguous VA -> SegmentVA conversion: VA falls in multiple segments";
-                        return result;
-                    }
-                    matching_segment = i;
-                    // offset_in_segment will be computed in make_segment_va
+                    // Return SegmentVA with segment index encoded
+                    result.address = TypedAddress::segment_va(static_cast<uint16_t>(i), from.value() - seg.vm_address.value());
+                    result.success = true;
+                    return result;
                 }
             }
-            
-            if (matching_segment == segments_.size()) {
-                result.error = "VA not within any segment";
-                return result;
+            // Fallback: try sections only if no segment matched
+            for (size_t i = 0; i < sections_.size(); ++i) {
+                const auto& sec = sections_[i];
+                if (sec.contains_va(from)) {
+                    result.address = TypedAddress::segment_va(static_cast<uint16_t>(i), from.value() - sec.virtual_address.value());
+                    result.success = true;
+                    return result;
+                }
             }
-            
-            // Return SegmentVA with segment index encoded
-            auto seg_va_result = TypedAddress::make_segment_va(static_cast<uint16_t>(matching_segment), 
-                                                                from.value() - segments_[matching_segment].vm_address.value());
-            if (!seg_va_result) {
-                result.error = seg_va_result.error().to_string();
-                return result;
-            }
-            result.address = seg_va_result.value();
-            result.success = true;
+            result.error = "VA not within any segment or section";
             return result;
         }
 
@@ -202,22 +170,37 @@ public:
             uint16_t segment_index = from.segment_index();
             uint64_t offset_in_segment = from.segment_offset();
             
-            if (segment_index >= segments_.size()) {
-                result.error = "Invalid segment index: " + std::to_string(segment_index);
+            if (segment_index < segments_.size()) {
+                const auto& seg = segments_[segment_index];
+                if (offset_in_segment >= seg.vm_size.value()) {
+                    result.error = "SegmentVA offset exceeds segment size";
+                    return result;
+                }
+                if (offset_in_segment > std::numeric_limits<uint64_t>::max() - segments_[segment_index].vm_address.value()) {
+                    result.error = "VA calculation overflow";
+                    return result;
+                }
+                result.address = TypedAddress::va(segments_[segment_index].vm_address.value() + offset_in_segment);
+                result.success = true;
+                return result;
+            }
+            // Fallback: try sections
+            if (segment_index < sections_.size()) {
+                const auto& sec = sections_[segment_index];
+                if (offset_in_segment >= sec.virtual_size) {
+                    result.error = "SegmentVA offset exceeds section virtual size";
+                    return result;
+                }
+                if (offset_in_segment > std::numeric_limits<uint64_t>::max() - sec.virtual_address.value()) {
+                    result.error = "VA calculation overflow";
+                    return result;
+                }
+                result.address = TypedAddress::va(sec.virtual_address.value() + offset_in_segment);
+                result.success = true;
                 return result;
             }
             
-            const auto& seg = segments_[segment_index];
-            if (offset_in_segment >= seg.vm_size.value()) {
-                result.error = "SegmentVA offset exceeds segment size";
-                return result;
-            }
-            if (offset_in_segment > std::numeric_limits<uint64_t>::max() - segments_[segment_index].vm_address.value()) {
-                result.error = "VA calculation overflow";
-                return result;
-            }
-            result.address = TypedAddress::va(segments_[segment_index].vm_address.value() + offset_in_segment);
-            result.success = true;
+            result.error = "Invalid segment index: " + std::to_string(segment_index);
             return result;
         }
 
@@ -244,7 +227,7 @@ public:
         // VA <-> SegmentVA (bidirectional now)
         if ((from == AddressSpace::VA && to == AddressSpace::SegmentVA) ||
             (from == AddressSpace::SegmentVA && to == AddressSpace::VA)) {
-            return !segments_.empty();
+            return !segments_.empty() || !sections_.empty();
         }
 
         return false;

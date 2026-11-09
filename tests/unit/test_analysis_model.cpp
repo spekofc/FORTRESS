@@ -1227,7 +1227,7 @@ TEST(AnalysisModel, MachO_SegmentVA_RoundTrip) {
     EXPECT_EQ(result2.address.value(), 0x100001000);
 }
 
-TEST(AnalysisModel, MachO_SegmentVA_Ambiguous) {
+TEST(AnalysisModel, MachO_SegmentVA_OverlappingSegments) {
     std::vector<NormalizedSection> sections;
     std::vector<SegmentMapping> segments;
     
@@ -1250,11 +1250,12 @@ TEST(AnalysisModel, MachO_SegmentVA_Ambiguous) {
     
     MachOAddressConverter converter(sections, segments);
     
-    // VA in the overlapping region - should be ambiguous
+    // VA in the overlapping region - should return first match (segment 0)
     auto va = TypedAddress::va(0x100001000);
     auto result = converter.convert(va, AddressSpace::SegmentVA);
-    EXPECT_FALSE(result.success);
-    EXPECT_NE(result.error.find("Ambiguous"), std::string::npos);
+    EXPECT_TRUE(result.success);
+    EXPECT_EQ(result.address.segment_index(), 0);
+    EXPECT_EQ(result.address.segment_offset(), 0x1000);
 }
 
 // --- Section Boundary Tests ---
@@ -1479,11 +1480,12 @@ TEST(AnalysisModel, MachO_OverlappingSegments) {
     
     MachOAddressConverter converter({}, segments);
     
-    // VA in overlapping region - should be ambiguous
+    // VA in overlapping region - should return first match (segment 0)
     auto va = TypedAddress::va(0x100001500);
     auto result = converter.convert(va, AddressSpace::SegmentVA);
-    EXPECT_FALSE(result.success);
-    EXPECT_NE(result.error.find("Ambiguous"), std::string::npos);
+    EXPECT_TRUE(result.success);
+    EXPECT_EQ(result.address.segment_index(), 0);
+    EXPECT_EQ(result.address.segment_offset(), 0x1500);
     
     // Non-overlapping should still work
     auto va2 = TypedAddress::va(0x100000500);
