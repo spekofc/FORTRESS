@@ -546,14 +546,19 @@ CallGraphResult CallGraphBuilder::build_call_graph(const BinaryAnalysisResult& a
                                                     const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs) {
     resolutions_.clear();
     
-    auto graph = std::make_unique<CallGraph>();
     BuildContext ctx;
     ctx.analysis = &analysis;
     ctx.cfgs = &cfgs;
+    
+    auto graph = std::make_unique<CallGraph>();
     ctx.graph = graph.get();
     
-    CallGraphResult result = build_call_graph_internal(analysis, cfgs, ctx);
-    return result;
+    bool success = build_call_graph_internal(analysis, cfgs, ctx);
+    if (success) {
+        return CallGraphResult(std::move(graph));
+    } else {
+        return CallGraphResult("Call graph construction failed");
+    }
 }
 
 CallGraphResult CallGraphBuilder::build_call_graph(const BinaryAnalysisResult& analysis) {
@@ -662,9 +667,7 @@ CallGraphResult CallGraphBuilder::build_local_call_graph(const BinaryAnalysisRes
     return CallGraphResult(std::move(filtered));
 }
 
-CallGraphResult CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& analysis,
-                                                             const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs,
-                                                             BuildContext& ctx) {
+bool CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& analysis, const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs, BuildContext& ctx) {
     for (const auto& func : analysis.functions) {
         create_or_get_node(ctx, const_cast<FunctionInfo*>(&func), false);
     }
@@ -721,14 +724,12 @@ CallGraphResult CallGraphBuilder::build_call_graph_internal(const BinaryAnalysis
     if (!validate_graph(*ctx.graph, validation_error)) {
         ctx.graph->is_valid = false;
         ctx.graph->error_message = "Call graph validation failed: " + validation_error;
+        return false;
     } else {
         ctx.graph->is_valid = true;
     }
     
-    // Transfer ownership of the graph
-    auto graph_ptr = std::unique_ptr<CallGraph>(ctx.graph);
-    ctx.graph = nullptr;
-    return CallGraphResult(std::move(graph_ptr));
+    return true;
 }
 
 uint32_t CallGraphBuilder::create_or_get_node(BuildContext& ctx, FunctionInfo* function, bool is_external) {
@@ -923,6 +924,7 @@ CallResolution CallGraphBuilder::resolve_direct_call(BuildContext&, const CallSi
                     target.confidence = CallResolutionConfidence::High;
                     target.resolution_method = "Import table entry";
                     target.is_external = true;
+                    resolution.edge_type = CallEdgeType::Import;
                     break;
                 }
             }
@@ -1212,3 +1214,4 @@ bool CallGraphBuilder::validate_graph(CallGraph& graph, std::string& error) cons
 }
 
 } // namespace fortress
+
