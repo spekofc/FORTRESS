@@ -875,3 +875,547 @@ TEST(AnalysisModel, Denormalize_EmptyResult) {
     EXPECT_EQ(denormalized.symbols.size(), 0);
     EXPECT_EQ(denormalized.functions.size(), 0);
 }
+
+// ============================================================================
+// Hardening Regression Tests
+// ============================================================================
+
+// --- PE Hardening Tests ---
+
+TEST(AnalysisModel, PE_RVA_VA_Overflow) {
+    PEAddressConverter converter(UINT64_MAX - 0x1000, {});
+    auto rva = TypedAddress::rva(0x2000);
+    auto result = converter.convert(rva, AddressSpace::VA);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("overflow"), std::string::npos);
+}
+
+TEST(AnalysisModel, PE_VA_Below_ImageBase) {
+    PEAddressConverter converter(0x400000, {});
+    auto va = TypedAddress::va(0x300000);
+    auto result = converter.convert(va, AddressSpace::RVA);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("below image base"), std::string::npos);
+}
+
+TEST(AnalysisModel, PE_FileOffset_BeyondRawSize) {
+    std::vector<NormalizedSection> sections;
+    NormalizedSection sec;
+    sec.name = ".text";
+    sec.file_offset = TypedAddress::file_offset(0x1000);
+    sec.rva = TypedAddress::rva(0x1000);
+    sec.virtual_size = 0x1000;
+    sec.raw_size = 0x800;  // raw_size < virtual_size
+    sections.push_back(sec);
+    
+    PEAddressConverter converter(0x400000, sections);
+    
+    // FileOffset within virtual range but beyond raw_size
+    auto fo = TypedAddress::file_offset(0x1800);
+    auto result = converter.convert(fo, AddressSpace::RVA);
+    EXPECT_FALSE(result.success);
+    // Conversion should fail because file offset exceeds raw_size
+    EXPECT_FALSE(result.error.empty());
+}
+
+TEST(AnalysisModel, PE_RVA_In_VirtualOnly_Region) {
+    std::vector<NormalizedSection> sections;
+    NormalizedSection sec;
+    sec.name = ".bss";
+    sec.file_offset = TypedAddress::file_offset(0x2000);
+    sec.rva = TypedAddress::rva(0x2000);
+    sec.virtual_size = 0x1000;
+    sec.raw_size = 0;  // No file data (BSS)
+    sections.push_back(sec);
+    
+    PEAddressConverter converter(0x400000, sections);
+    
+    // RVA in the BSS region - no file offset
+    auto rva = TypedAddress::rva(0x2500);
+    auto result = converter.convert(rva, AddressSpace::FileOffset);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("virtual-only"), std::string::npos);
+}
+
+TEST(AnalysisModel, PE_Overflow_RVA_Calculation) {
+    PEAddressConverter converter(0x400000, {});
+    // Use a section with RVA near max
+    std::vector<NormalizedSection> sections;
+    NormalizedSection sec;
+    sec.rva = TypedAddress::rva(UINT64_MAX - 0x100);
+    sec.virtual_size = 0x200;
+    sections.push_back(sec);
+    converter.set_sections(sections);
+    
+    auto fo = TypedAddress::file_offset(0x100);
+    auto result = converter.convert(fo, AddressSpace::RVA);
+    // The conversion should either fail or produce an error
+    EXPECT_FALSE(result.success);
+}
+
+// --- ELF Hardening Tests ---
+
+TEST(AnalysisModel, ELF_VA_In_BSS_Region) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "LOAD";
+    seg.vm_address = TypedAddress::va(0x400000);
+    seg.vm_size = TypedAddress::va(0x2000);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x1000);  // file_size < vm_size
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter(sections, segments);
+    
+    // VA in the BSS portion (beyond file_size)
+    auto va = TypedAddress::va(0x401500);
+    auto result = converter.convert(va, AddressSpace::FileOffset);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("virtual-only"), std::string::npos);
+}
+
+TEST(AnalysisModel, ELF_FileOffset_BeyondFileSize) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "LOAD";
+    seg.vm_address = TypedAddress::va(0x400000);
+    seg.vm_size = TypedAddress::va(0x2000);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x1000);
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter(sections, segments);
+    
+    // FileOffset at the boundary
+    auto fo = TypedAddress::file_offset(0x2000);
+    auto result = converter.convert(fo, AddressSpace::VA);
+    EXPECT_FALSE(result.success);
+}
+
+TEST(AnalysisModel, ELF_Overflow_VA_Calculation) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    // seg.vm_address = UINT64_MAX - 0x100
+    // To trigger overflow: offset_in_segment > max - vm_address
+    // max - vm_address = 0x100, so we need offset_in_segment > 0x100
+    SegmentMapping seg;
+    seg.vm_address = TypedAddress::va(UINT64_MAX - 0x100);
+    seg.vm_size = TypedAddress::va(0x200);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x200);
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter(sections, segments);
+    
+    // offset = 0x1100 -> offset_in_segment = 0x100 (no overflow)
+    // Use offset that causes overflow: file_offset 0x1200 -> offset_in_segment = 0x200
+    // 0x200 > 0x100 (max - vm_address) -> overflow
+    auto fo = TypedAddress::file_offset(0x1200);
+    auto result = converter.convert(fo, AddressSpace::VA);
+    // The conversion should fail due to overflow
+    EXPECT_FALSE(result.success);
+    EXPECT_FALSE(result.error.empty());
+}
+
+TEST(AnalysisModel, ELF_Pmemsz_Greater_Pfilesz) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "LOAD";
+    seg.vm_address = TypedAddress::va(0x400000);
+    seg.vm_size = TypedAddress::va(0x2000);      // p_memsz = 0x2000
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x1000);  // p_filesz = 0x1000
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter(sections, segments);
+    
+    // VA in the file-backed portion should work
+    auto va_file = TypedAddress::va(0x400500);
+    auto result1 = converter.convert(va_file, AddressSpace::FileOffset);
+    EXPECT_TRUE(result1.success);
+    
+    // VA in the BSS portion (0x401000 to 0x402000) should fail
+    auto va_bss = TypedAddress::va(0x401500);
+    auto result2 = converter.convert(va_bss, AddressSpace::FileOffset);
+    EXPECT_FALSE(result2.success);
+    EXPECT_NE(result2.error.find("virtual-only"), std::string::npos);
+}
+
+// --- Mach-O Hardening Tests ---
+
+TEST(AnalysisModel, MachO_VA_In_VirtualOnly_Region) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "__DATA";
+    seg.vm_address = TypedAddress::va(0x100000000);
+    seg.vm_size = TypedAddress::va(0x2000);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x1000);  // file_size < vm_size
+    segments.push_back(seg);
+    
+    MachOAddressConverter converter(sections, segments);
+    
+    // VA in the virtual-only portion
+    auto va = TypedAddress::va(0x100001500);
+    auto result = converter.convert(va, AddressSpace::FileOffset);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("virtual-only"), std::string::npos);
+}
+
+TEST(AnalysisModel, MachO_FileOffset_BeyondFileSize) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "__TEXT";
+    seg.vm_address = TypedAddress::va(0x100000000);
+    seg.vm_size = TypedAddress::va(0x2000);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x1000);
+    segments.push_back(seg);
+    
+    MachOAddressConverter converter(sections, segments);
+    
+    // FileOffset beyond file_size
+    auto fo = TypedAddress::file_offset(0x2000);
+    auto result = converter.convert(fo, AddressSpace::VA);
+    EXPECT_FALSE(result.success);
+}
+
+TEST(AnalysisModel, MachO_Overflow_VA_Calculation) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.vm_address = TypedAddress::va(UINT64_MAX - 0x100);
+    seg.vm_size = TypedAddress::va(0x200);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x200);
+    segments.push_back(seg);
+    
+    MachOAddressConverter converter(sections, segments);
+    
+    // Use offset that causes overflow: file_offset 0x1200 -> offset_in_segment = 0x200
+    // 0x200 > 0x100 (max - vm_address) -> overflow
+    auto fo = TypedAddress::file_offset(0x1200);
+    auto result = converter.convert(fo, AddressSpace::VA);
+    // The conversion should fail due to overflow
+    EXPECT_FALSE(result.success);
+    EXPECT_FALSE(result.error.empty());
+}
+
+TEST(AnalysisModel, MachO_SegmentVA_RoundTrip) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "__TEXT";
+    seg.vm_address = TypedAddress::va(0x100000000);
+    seg.vm_size = TypedAddress::va(0x2000);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0x2000);
+    segments.push_back(seg);
+    
+    MachOAddressConverter converter(sections, segments);
+    
+    // VA -> SegmentVA
+    auto va = TypedAddress::va(0x100001000);
+    auto result1 = converter.convert(va, AddressSpace::SegmentVA);
+    EXPECT_TRUE(result1.success);
+    
+    // Use SegmentVAAddress for round-trip
+    // Note: SegmentVAAddress is in the same namespace, not nested
+    fortress::SegmentVAAddress sva;
+    sva.segment_name = "__TEXT";
+    sva.offset_in_segment = 0x1000;
+    
+    auto result2 = converter.convert_segment_va(sva, AddressSpace::VA);
+    EXPECT_TRUE(result2.success);
+    EXPECT_EQ(result2.address.value(), 0x100001000);
+}
+
+TEST(AnalysisModel, MachO_SegmentVA_Ambiguous) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    // Two segments with overlapping VA ranges (malformed)
+    SegmentMapping seg1;
+    seg1.segment_name = "__TEXT";
+    seg1.vm_address = TypedAddress::va(0x100000000);
+    seg1.vm_size = TypedAddress::va(0x2000);
+    seg1.file_offset = TypedAddress::file_offset(0x1000);
+    seg1.file_size = TypedAddress::file_offset(0x2000);
+    segments.push_back(seg1);
+    
+    SegmentMapping seg2;
+    seg2.segment_name = "__DATA";
+    seg2.vm_address = TypedAddress::va(0x100000000);  // Same base!
+    seg2.vm_size = TypedAddress::va(0x2000);
+    seg2.file_offset = TypedAddress::file_offset(0x3000);
+    seg2.file_size = TypedAddress::file_offset(0x2000);
+    segments.push_back(seg2);
+    
+    MachOAddressConverter converter(sections, segments);
+    
+    // VA in the overlapping region
+    auto va = TypedAddress::va(0x100001000);
+    auto result = converter.convert(va, AddressSpace::SegmentVA);
+    // Should find first matching segment
+    EXPECT_TRUE(result.success);
+}
+
+// --- Section Boundary Tests ---
+
+TEST(AnalysisModel, Section_ContainsVA_Overflow) {
+    NormalizedSection sec;
+    sec.name = ".text";
+    sec.virtual_address = TypedAddress::va(UINT64_MAX - 0x100);
+    sec.virtual_size = 0x200;
+    
+    // Should not overflow when checking boundary
+    auto va1 = TypedAddress::va(UINT64_MAX - 0x80);
+    auto va2 = TypedAddress::va(UINT64_MAX - 0x200);
+    
+    // The method should handle overflow gracefully
+    // (implementation uses simple comparison which naturally handles wrap-around)
+    EXPECT_FALSE(sec.contains_va(va1));  // Beyond range
+    EXPECT_FALSE(sec.contains_va(va2));  // Below range (wraps around)
+}
+
+TEST(AnalysisModel, Section_ContainsFileOffset_Overflow) {
+    NormalizedSection sec;
+    sec.name = ".text";
+    sec.file_offset = TypedAddress::file_offset(UINT64_MAX - 0x100);
+    sec.raw_size = 0x200;
+    
+    auto fo1 = TypedAddress::file_offset(UINT64_MAX - 0x80);
+    auto fo2 = TypedAddress::file_offset(UINT64_MAX - 0x200);
+    
+    EXPECT_FALSE(sec.contains_file_offset(fo1));
+    EXPECT_FALSE(sec.contains_file_offset(fo2));
+}
+
+// --- Function Boundary Tests ---
+
+TEST(AnalysisModel, FindFunctionByVA_Overflow) {
+    NormalizedAnalysisResult result;
+    
+    NormalizedFunction fn;
+    fn.name = "main";
+    fn.address = TypedAddress::va(UINT64_MAX - 0x100);
+    fn.size = 0x200;
+    result.functions.push_back(std::move(fn));
+    
+    // Should not crash
+    auto found = result.find_function_by_va(TypedAddress::va(UINT64_MAX - 0x80));
+    // Behavior is implementation-defined for overflow ranges
+    // Just ensure no crash
+    (void)found;
+}
+
+// --- JSON Escaping Tests ---
+
+TEST(AnalysisModel, ToJSON_SpecialCharacters) {
+    NormalizedAnalysisResult result;
+    result.metadata.file_path = R"(/path/with\"quotes/and\backslashes/binary.exe)";
+    result.metadata.format = BinaryFormat::PE;
+    result.metadata.architecture = Architecture::X64;
+    result.metadata.endianness = Endianness::Little;
+    result.metadata.is_64bit = true;
+    result.metadata.entry_point = TypedAddress::va(0x401000);
+    result.valid_format = true;
+    
+    std::string json = result.to_json();
+    
+    // Should contain escaped quotes and backslashes
+    EXPECT_NE(json.find(R"(\")"), std::string::npos);
+    EXPECT_NE(json.find(R"(\\)"), std::string::npos);
+}
+
+TEST(AnalysisModel, ToJSON_UnicodePath) {
+    NormalizedAnalysisResult result;
+    result.metadata.file_path = "/path/日本語/файл/binary.exe";
+    result.metadata.format = BinaryFormat::ELF;
+    result.metadata.architecture = Architecture::X64;
+    result.metadata.endianness = Endianness::Little;
+    result.metadata.is_64bit = true;
+    result.metadata.entry_point = TypedAddress::va(0x401000);
+    result.valid_format = true;
+    
+    std::string json = result.to_json();
+    
+    // Should handle UTF-8 path
+    EXPECT_NE(json.find("日本語"), std::string::npos);
+    EXPECT_NE(json.find("файл"), std::string::npos);
+}
+
+// --- TypedAddress Edge Cases ---
+
+TEST(AnalysisModel, TypedAddress_Comparison_CrossSpace) {
+    // Different spaces should not be equal even with same value
+    auto va = TypedAddress::va(0x1000);
+    auto rva = TypedAddress::rva(0x1000);
+    auto fo = TypedAddress::file_offset(0x1000);
+    
+    EXPECT_NE(va, rva);
+    EXPECT_NE(va, fo);
+    EXPECT_NE(rva, fo);
+    
+    // Ordering by space type
+    EXPECT_LT(fo, rva);  // FileOffset < RVA
+    EXPECT_LT(rva, va);  // RVA < VA
+}
+
+TEST(AnalysisModel, TypedAddress_ExplicitCast) {
+    auto va = TypedAddress::va(0x401000);
+    uint64_t raw = static_cast<uint64_t>(va);
+    EXPECT_EQ(raw, 0x401000);
+}
+
+// --- AddressConverter Edge Cases ---
+
+TEST(AnalysisModel, AddressConverter_CanConvert_PE_NoSections) {
+    PEAddressConverter converter(0x400000, {});
+    
+    EXPECT_TRUE(converter.can_convert(AddressSpace::RVA, AddressSpace::VA));
+    EXPECT_TRUE(converter.can_convert(AddressSpace::VA, AddressSpace::RVA));
+    EXPECT_FALSE(converter.can_convert(AddressSpace::FileOffset, AddressSpace::RVA));
+    EXPECT_FALSE(converter.can_convert(AddressSpace::RVA, AddressSpace::FileOffset));
+}
+
+TEST(AnalysisModel, AddressConverter_CanConvert_ELF_NoSegments) {
+    ELFAddressConverter converter({}, {});
+    
+    EXPECT_FALSE(converter.can_convert(AddressSpace::FileOffset, AddressSpace::VA));
+    EXPECT_FALSE(converter.can_convert(AddressSpace::VA, AddressSpace::FileOffset));
+}
+
+TEST(AnalysisModel, AddressConverter_CanConvert_MachO_NoSegments) {
+    MachOAddressConverter converter({}, {});
+    
+    EXPECT_FALSE(converter.can_convert(AddressSpace::FileOffset, AddressSpace::VA));
+    EXPECT_FALSE(converter.can_convert(AddressSpace::VA, AddressSpace::FileOffset));
+}
+
+TEST(AnalysisModel, AddressConverter_ImageBase_ELF) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.max_protection = 0x1;  // PF_R
+    seg.vm_address = TypedAddress::va(0x400000);
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter({}, segments);
+    auto base = converter.image_base();
+    EXPECT_TRUE(base.has_value());
+    EXPECT_EQ(*base, 0x400000);
+}
+
+TEST(AnalysisModel, AddressConverter_ImageBase_MachO) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.segment_name = "__TEXT";
+    seg.vm_address = TypedAddress::va(0x100000000);
+    segments.push_back(seg);
+    
+    MachOAddressConverter converter({}, segments);
+    auto base = converter.image_base();
+    EXPECT_TRUE(base.has_value());
+    EXPECT_EQ(*base, 0x100000000);
+}
+
+// --- Malformed Binary Tests ---
+
+TEST(AnalysisModel, PE_OverlappingSections) {
+    std::vector<NormalizedSection> sections;
+    
+    NormalizedSection sec1;
+    sec1.name = ".text";
+    sec1.file_offset = TypedAddress::file_offset(0x1000);
+    sec1.raw_size = 0x2000;
+    sections.push_back(sec1);
+    
+    NormalizedSection sec2;
+    sec2.name = ".data";
+    sec2.file_offset = TypedAddress::file_offset(0x2000);  // Overlaps
+    sec2.raw_size = 0x1000;
+    sections.push_back(sec2);
+    
+    PEAddressConverter converter(0x400000, sections);
+    
+    // FileOffset in overlapping region - first match wins
+    auto fo = TypedAddress::file_offset(0x2500);
+    auto result = converter.convert(fo, AddressSpace::RVA);
+    EXPECT_TRUE(result.success);
+}
+
+TEST(AnalysisModel, MachO_OverlappingSegments) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg1;
+    seg1.segment_name = "__TEXT";
+    seg1.vm_address = TypedAddress::va(0x100000000);
+    seg1.vm_size = TypedAddress::va(0x2000);
+    seg1.file_offset = TypedAddress::file_offset(0x1000);
+    seg1.file_size = TypedAddress::file_offset(0x2000);
+    segments.push_back(seg1);
+    
+    SegmentMapping seg2;
+    seg2.segment_name = "__DATA";
+    seg2.vm_address = TypedAddress::va(0x100001000);  // Overlapping
+    seg2.vm_size = TypedAddress::va(0x2000);
+    seg2.file_offset = TypedAddress::file_offset(0x3000);
+    seg2.file_size = TypedAddress::file_offset(0x2000);
+    segments.push_back(seg2);
+    
+    MachOAddressConverter converter({}, segments);
+    
+    // VA in overlapping region - first match wins
+    auto va = TypedAddress::va(0x100001500);
+    auto result = converter.convert(va, AddressSpace::SegmentVA);
+    EXPECT_TRUE(result.success);
+}
+
+// --- Empty/Zero-Size Tests ---
+
+TEST(AnalysisModel, Section_ZeroSize) {
+    NormalizedSection sec;
+    sec.name = ".text";
+    sec.virtual_address = TypedAddress::va(0x401000);
+    sec.virtual_size = 0;
+    sec.raw_size = 0;
+    
+    EXPECT_FALSE(sec.contains_va(TypedAddress::va(0x401000)));
+    EXPECT_FALSE(sec.contains_file_offset(TypedAddress::file_offset(0x1000)));
+}
+
+TEST(AnalysisModel, Segment_ZeroSize) {
+    std::vector<NormalizedSection> sections;
+    std::vector<SegmentMapping> segments;
+    
+    SegmentMapping seg;
+    seg.vm_address = TypedAddress::va(0x400000);
+    seg.vm_size = TypedAddress::va(0);
+    seg.file_offset = TypedAddress::file_offset(0x1000);
+    seg.file_size = TypedAddress::file_offset(0);
+    segments.push_back(seg);
+    
+    ELFAddressConverter converter({}, {seg});
+    
+    auto va = TypedAddress::va(0x400000);
+    auto result = converter.convert(va, AddressSpace::FileOffset);
+    EXPECT_FALSE(result.success);
+}

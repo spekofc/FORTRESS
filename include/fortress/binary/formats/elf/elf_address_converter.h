@@ -6,6 +6,7 @@
 #include <fortress/binary/analysis/analysis_model.h>
 #include <vector>
 #include <optional>
+#include <limits>
 
 namespace fortress {
 
@@ -36,9 +37,21 @@ public:
         if (from.space() == AddressSpace::FileOffset && to_space == AddressSpace::VA) {
             // Use program headers (segments) for mapping
             for (const auto& seg : segments_) {
-                if (from.value() >= seg.file_offset.value() && 
-                    from.value() < seg.file_offset.value() + seg.file_size.value()) {
-                    uint64_t offset_in_segment = from.value() - seg.file_offset.value();
+                uint64_t seg_file_start = seg.file_offset.value();
+                uint64_t seg_file_size = seg.file_size.value();
+                
+                if (seg_file_size > std::numeric_limits<uint64_t>::max() - seg_file_start) {
+                    result.error = "Segment file range overflow";
+                    return result;
+                }
+                uint64_t seg_file_end = seg_file_start + seg_file_size;
+                
+                if (from.value() >= seg_file_start && from.value() < seg_file_end) {
+                    uint64_t offset_in_segment = from.value() - seg_file_start;
+                    if (offset_in_segment > std::numeric_limits<uint64_t>::max() - seg.vm_address.value()) {
+                        result.error = "VA calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::va(seg.vm_address.value() + offset_in_segment);
                     result.success = true;
                     return result;
@@ -48,6 +61,14 @@ public:
             for (const auto& sec : sections_) {
                 if (sec.contains_file_offset(from)) {
                     uint64_t offset_in_section = from.value() - sec.file_offset.value();
+                    if (offset_in_section >= sec.raw_size) {
+                        result.error = "File offset beyond raw data in section";
+                        return result;
+                    }
+                    if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.virtual_address.value()) {
+                        result.error = "VA calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::va(sec.virtual_address.value() + offset_in_section);
                     result.success = true;
                     return result;
@@ -60,9 +81,27 @@ public:
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::FileOffset) {
             // Use program headers (segments) for mapping
             for (const auto& seg : segments_) {
-                if (from.value() >= seg.vm_address.value() && 
-                    from.value() < seg.vm_address.value() + seg.vm_size.value()) {
-                    uint64_t offset_in_segment = from.value() - seg.vm_address.value();
+                uint64_t seg_vm_start = seg.vm_address.value();
+                uint64_t seg_vm_size = seg.vm_size.value();
+                uint64_t seg_file_size = seg.file_size.value();
+                
+                if (seg_vm_size > std::numeric_limits<uint64_t>::max() - seg_vm_start) {
+                    result.error = "Segment virtual range overflow";
+                    return result;
+                }
+                uint64_t seg_vm_end = seg_vm_start + seg_vm_size;
+                
+                if (from.value() >= seg_vm_start && from.value() < seg_vm_end) {
+                    uint64_t offset_in_segment = from.value() - seg_vm_start;
+                    // Only convert if the VA falls within the file-backed portion (p_filesz)
+                    if (offset_in_segment >= seg_file_size) {
+                        result.error = "VA points to virtual-only region, no file offset";
+                        return result;
+                    }
+                    if (offset_in_segment > std::numeric_limits<uint64_t>::max() - seg.file_offset.value()) {
+                        result.error = "FileOffset calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::file_offset(seg.file_offset.value() + offset_in_segment);
                     result.success = true;
                     return result;
@@ -72,6 +111,15 @@ public:
             for (const auto& sec : sections_) {
                 if (sec.contains_va(from)) {
                     uint64_t offset_in_section = from.value() - sec.virtual_address.value();
+                    // Only allow conversion if the VA falls within raw data
+                    if (offset_in_section >= sec.raw_size) {
+                        result.error = "VA points to virtual-only region in section, no file offset";
+                        return result;
+                    }
+                    if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.file_offset.value()) {
+                        result.error = "FileOffset calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
                     result.success = true;
                     return result;

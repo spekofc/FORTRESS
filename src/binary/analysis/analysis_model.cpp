@@ -57,10 +57,34 @@ std::string NormalizedAnalysisResult::summary() const {
     return oss.str();
 }
 
+// Helper function for JSON string escaping
+static std::string json_escape(const std::string& input) {
+    std::ostringstream oss;
+    for (char c : input) {
+        switch (c) {
+            case '"': oss << "\\\""; break;
+            case '\\': oss << "\\\\"; break;
+            case '\b': oss << "\\b"; break;
+            case '\f': oss << "\\f"; break;
+            case '\n': oss << "\\n"; break;
+            case '\r': oss << "\\r"; break;
+            case '\t': oss << "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    oss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(c));
+                } else {
+                    oss << c;
+                }
+                break;
+        }
+    }
+    return oss.str();
+}
+
 std::string NormalizedAnalysisResult::to_json() const {
     std::ostringstream oss;
     oss << "{\n"
-        << "  \"file\": \"" << metadata.file_path.string() << "\",\n"
+        << "  \"file\": \"" << json_escape(metadata.file_path.string()) << "\",\n"
         << "  \"format\": \"" << to_string(metadata.format) << "\",\n"
         << "  \"architecture\": \"" << to_string(metadata.architecture) << "\",\n"
         << "  \"endianness\": \"" << to_string(metadata.endianness) << "\",\n"
@@ -105,10 +129,16 @@ std::optional<const NormalizedFunction*> NormalizedAnalysisResult::find_function
         if (fn.address == va) {
             return &fn;
         }
-        // Also check if within function range
-        if (fn.address.value() <= va.value() && 
-            (fn.size == 0 || fn.address.value() + fn.size > va.value())) {
-            return &fn;
+        // Also check if within function range (with overflow protection)
+        if (fn.size > 0) {
+            if (fn.address.value() > std::numeric_limits<uint64_t>::max() - fn.size) {
+                // Overflow in range calculation
+                continue;
+            }
+            uint64_t fn_end = fn.address.value() + fn.size;
+            if (fn.address.value() <= va.value() && va.value() < fn_end) {
+                return &fn;
+            }
         }
     }
     return std::nullopt;

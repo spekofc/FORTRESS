@@ -6,6 +6,7 @@
 #include <fortress/binary/analysis/analysis_model.h>
 #include <vector>
 #include <optional>
+#include <limits>
 
 namespace fortress {
 
@@ -31,10 +32,14 @@ public:
             return result;
         }
 
-        // RVA <-> VA (using image_base)
+        // RVA <-> VA (using image_base) with overflow check
         if (from.space() == AddressSpace::RVA && to_space == AddressSpace::VA) {
             if (image_base_ == 0) {
                 result.error = "Image base not set";
+                return result;
+            }
+            if (from.value() > std::numeric_limits<uint64_t>::max() - image_base_) {
+                result.error = "RVA + ImageBase overflow";
                 return result;
             }
             result.address = TypedAddress::va(from.value() + image_base_);
@@ -61,6 +66,15 @@ public:
             for (const auto& sec : sections_) {
                 if (sec.contains_file_offset(from)) {
                     uint64_t offset_in_section = from.value() - sec.file_offset.value();
+                    // Check if offset exceeds raw_size (file-backed data)
+                    if (offset_in_section >= sec.raw_size) {
+                        result.error = "File offset beyond raw data in section";
+                        return result;
+                    }
+                    if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.rva.value()) {
+                        result.error = "RVA calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::rva(sec.rva.value() + offset_in_section);
                     result.success = true;
                     return result;
@@ -72,9 +86,19 @@ public:
 
         if (from.space() == AddressSpace::RVA && to_space == AddressSpace::FileOffset) {
             for (const auto& sec : sections_) {
+                // Check if RVA falls within this section's virtual range
                 if (from.value() >= sec.rva.value() && 
                     from.value() < sec.rva.value() + sec.virtual_size) {
                     uint64_t offset_in_section = from.value() - sec.rva.value();
+                    // Only allow conversion if the data is file-backed
+                    if (offset_in_section >= sec.raw_size) {
+                        result.error = "RVA points to virtual-only region (BSS/zero-filled), no file offset";
+                        return result;
+                    }
+                    if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.file_offset.value()) {
+                        result.error = "FileOffset calculation overflow";
+                        return result;
+                    }
                     result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
                     result.success = true;
                     return result;
