@@ -318,21 +318,25 @@ void CallGraph::compute_statistics() {
     statistics.tail_calls = 0;
     statistics.edge_type_counts.clear();
     
+    
+    
     for (const auto& node : nodes) {
         if (node.is_external) statistics.external_functions++;
         else statistics.internal_functions++;
         
         if (node.is_thunk) statistics.thunk_functions++;
         if (node.is_recursive) statistics.recursive_functions++;
-        if (node.is_mutual_recursive) statistics.mutual_recursive_pairs++;
+        // mutual_recursive_pairs counted below via unique pairs
+        if (node.is_import) statistics.import_functions++;
         
-        statistics.avg_callees_per_function += node.unique_callees;
-        statistics.avg_callers_per_function += node.unique_callers;
+        // Compute unique callees/callers on the fly (after deduplication)
+        statistics.avg_callees_per_function += static_cast<double>(node.callees.size());
+        statistics.avg_callers_per_function += static_cast<double>(node.callers.size());
     }
     
     if (!nodes.empty()) {
-        statistics.avg_callees_per_function /= nodes.size();
-        statistics.avg_callers_per_function /= nodes.size();
+        statistics.avg_callees_per_function = statistics.avg_callees_per_function / static_cast<double>(nodes.size());
+        statistics.avg_callers_per_function = statistics.avg_callers_per_function / static_cast<double>(nodes.size());
     }
     
     for (const auto& edge : edges) {
@@ -854,7 +858,7 @@ void CallGraphBuilder::merge_edges(BuildContext& ctx) {
     }
     
     for (auto& node : ctx.graph->nodes) {
-        auto update_refs = [&](std::vector<uint32_t>& refs) {
+        auto update_edge_refs = [&](std::vector<uint32_t>& refs) {
             std::vector<uint32_t> new_refs;
             for (uint32_t old_id : refs) {
                 auto it = old_to_new.find(old_id);
@@ -867,10 +871,29 @@ void CallGraphBuilder::merge_edges(BuildContext& ctx) {
             refs = std::move(new_refs);
         };
         
-        update_refs(node.outgoing_edges);
-        update_refs(node.incoming_edges);
-        update_refs(node.callees);
-        update_refs(node.callers);
+        update_edge_refs(node.outgoing_edges);
+        update_edge_refs(node.incoming_edges);
+        
+        // Rebuild callees and callers from merged edges
+        node.callees.clear();
+        node.callers.clear();
+    }
+    
+    // Rebuild callees and callers from merged edges
+    for (const auto& edge : merged_edges) {
+        if (edge.target_node_id != UINT32_MAX && edge.source_node_id < ctx.graph->nodes.size() && edge.target_node_id < ctx.graph->nodes.size()) {
+            ctx.graph->nodes[edge.source_node_id].callees.push_back(edge.target_node_id);
+            ctx.graph->nodes[edge.target_node_id].callers.push_back(edge.source_node_id);
+            ctx.graph->nodes[edge.source_node_id].call_count++;
+        }
+    }
+    
+    // Deduplicate callees and callers
+    for (auto& node : ctx.graph->nodes) {
+        std::sort(node.callees.begin(), node.callees.end());
+        node.callees.erase(std::unique(node.callees.begin(), node.callees.end()), node.callees.end());
+        std::sort(node.callers.begin(), node.callers.end());
+        node.callers.erase(std::unique(node.callers.begin(), node.callers.end()), node.callers.end());
     }
     
     ctx.graph->edges = std::move(merged_edges);
@@ -934,7 +957,7 @@ CallResolution CallGraphBuilder::resolve_direct_call(BuildContext&, const CallSi
                 if (sym.address == target_addr) {
                     target.is_import = true;
                     target.symbol_name = sym.name;
-                    target.confidence = CallResolutionConfidence::High;
+                    target.confidence = CallResolutionConfidence::Confirmed;
                     target.resolution_method = "Import table entry";
                     target.is_external = true;
                     resolution.edge_type = CallEdgeType::Import;
@@ -945,7 +968,7 @@ CallResolution CallGraphBuilder::resolve_direct_call(BuildContext&, const CallSi
         }
     }
     
-    if (config_.identify_thunks && !target.function) {
+    if (config_.identify_thunks && !target.function && !target.is_import) {
         TypedAddress thunk_target = resolve_thunk_target(target_addr);
         if (thunk_target.valid()) {
             target.address = thunk_target;

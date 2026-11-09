@@ -145,8 +145,8 @@ struct CallGraphStatistics {
     size_t unresolved_calls = 0;
     size_t tail_calls = 0;
     size_t max_call_depth = 0;
-    size_t avg_callees_per_function = 0;
-    size_t avg_callers_per_function = 0;
+    double avg_callees_per_function = 0.0;
+    double avg_callers_per_function = 0.0;
     std::unordered_map<std::string, size_t> edge_type_counts;
     
     CallGraphStatistics() = default;
