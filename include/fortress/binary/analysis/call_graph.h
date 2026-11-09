@@ -107,6 +107,7 @@ struct CallGraphNode {
     TypedAddress address;                             // Function entry address
     std::string name;                                 // Function name
     bool is_external = false;                         // External/imported function
+    bool is_import = false;                         // Import table entry
     bool is_entry_point = false;                      // Program entry point
     bool is_thunk = false;                            // Thunk function
     bool is_recursive = false;                        // Has self-recursive calls
@@ -305,12 +306,13 @@ private:
     // Build phases
     bool build_call_graph_internal(const BinaryAnalysisResult& analysis,
                                     const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs,
-                                    BuildContext& ctx);
+                                    BuildContext& ctx,
+                                    CallGraph& graph);
     
     // Node creation
     uint32_t create_or_get_node(BuildContext& ctx, FunctionInfo* function, bool is_external = false);
     uint32_t create_external_node(BuildContext& ctx, TypedAddress address, const std::string& name, 
-                                   const std::string& symbol_name = "");
+                                   const std::string& symbol_name = "", bool is_import = false);
     
     // Edge creation
     void add_edge(BuildContext& ctx, uint32_t src_id, uint32_t dst_id, const CallResolution& resolution);

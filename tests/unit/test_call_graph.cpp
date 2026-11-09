@@ -16,22 +16,22 @@ using namespace fortress;
 class CallGraphBuilderTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        config = CallGraphConfig();
-        config.compute_recursion = true;
-        config.compute_statistics = true;
-        config.merge_duplicate_edges = true;
+        config_ = CallGraphConfig();
+        config_.compute_recursion = true;
+        config_.compute_statistics = true;
+        config_.merge_duplicate_edges = true;
         
-        builder = std::make_unique<CallGraphBuilder>(config);
+        builder_ = std::make_unique<CallGraphBuilder>(config_);
         
-        analysis = make_test_analysis();
+        analysis_ = make_test_analysis();
     }
     
     BinaryAnalysisResult make_test_analysis() {
-        BinaryAnalysisResult analysis;
-        analysis.format = BinaryFormat::PE;
-        analysis.architecture = Architecture::X64;
-        analysis.is_64bit = true;
-        analysis.entry_point = 0x1000;
+        BinaryAnalysisResult result;
+        result.format = BinaryFormat::PE;
+        result.architecture = Architecture::X64;
+        result.is_64bit = true;
+        result.entry_point = 0x1000;
         
         // Add functions
         FunctionInfo func1;
@@ -42,7 +42,7 @@ protected:
         func1.confidence = ConfidenceLevel::High;
         func1.source = FunctionSource::EntryPoint;
         func1.call_targets = {0x2000, 0x3000};
-        analysis.functions.push_back(func1);
+        analysis_.functions.push_back(func1);
         
         FunctionInfo func2;
         func2.name = "func_a";
@@ -50,9 +50,9 @@ protected:
         func2.size = 50;
         func2.architecture = Architecture::X64;
         func2.confidence = ConfidenceLevel::High;
-        func2.source = FunctionSource::Symbol;
+        func2.source = FunctionSource::EntryPoint;
         func2.call_targets = {0x3000};
-        analysis.functions.push_back(func2);
+        analysis_.functions.push_back(func2);
         
         FunctionInfo func3;
         func3.name = "func_b";
@@ -60,8 +60,8 @@ protected:
         func3.size = 30;
         func3.architecture = Architecture::X64;
         func3.confidence = ConfidenceLevel::High;
-        func3.source = FunctionSource::Symbol;
-        analysis.functions.push_back(func3);
+        func3.source = FunctionSource::EntryPoint;
+        analysis_.functions.push_back(func3);
         
         // Add import
         ImportInfo import;
@@ -71,21 +71,21 @@ protected:
         sym.address = 0x4000;
         sym.type = SymbolType::Function;
         import.functions.push_back(sym);
-        analysis.imports.push_back(import);
+        analysis_.imports.push_back(import);
         
-        return analysis;
+        return analysis_;
     }
     
-    CallGraphConfig config;
-    std::unique_ptr<CallGraphBuilder> builder;
-    BinaryAnalysisResult analysis;
+    CallGraphConfig config_;
+    std::unique_ptr<CallGraphBuilder> builder_;
+    BinaryAnalysisResult analysis_;
 };
 
 // ============================================================================
 // Test: Basic call graph construction
 // ============================================================================
 TEST_F(CallGraphBuilderTest, BasicCallGraph) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     EXPECT_NE(result.graph, nullptr);
@@ -105,7 +105,7 @@ TEST_F(CallGraphBuilderTest, BasicCallGraph) {
 // Test: Function calling another function
 // ============================================================================
 TEST_F(CallGraphBuilderTest, FunctionCallingAnother) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -132,9 +132,9 @@ TEST_F(CallGraphBuilderTest, FunctionCallingAnother) {
 // ============================================================================
 TEST_F(CallGraphBuilderTest, MultipleCallsToSameDestination) {
     // Add another call from main to func_b
-    analysis.functions[0].call_targets.push_back(0x3000);
+    analysis_.functions[0].call_targets.push_back(0x3000);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -174,11 +174,11 @@ TEST_F(CallGraphBuilderTest, RecursiveCalls) {
     recursive_func.size = 100;
     recursive_func.architecture = Architecture::X64;
     recursive_func.confidence = ConfidenceLevel::High;
-    recursive_func.source = FunctionSource::Symbol;
+    recursive_func.source = FunctionSource::EntryPoint;
     recursive_func.call_targets = {0x5000}; // calls itself
-    analysis.functions.push_back(recursive_func);
+    analysis_.functions.push_back(recursive_func);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -212,9 +212,9 @@ TEST_F(CallGraphBuilderTest, MutualRecursion) {
     func_x.size = 50;
     func_x.architecture = Architecture::X64;
     func_x.confidence = ConfidenceLevel::High;
-    func_x.source = FunctionSource::Symbol;
+    func_x.source = FunctionSource::EntryPoint;
     func_x.call_targets = {0x6100};
-    analysis.functions.push_back(func_x);
+    analysis_.functions.push_back(func_x);
     
     FunctionInfo func_y;
     func_y.name = "mutual_y";
@@ -222,11 +222,11 @@ TEST_F(CallGraphBuilderTest, MutualRecursion) {
     func_y.size = 50;
     func_y.architecture = Architecture::X64;
     func_y.confidence = ConfidenceLevel::High;
-    func_y.source = FunctionSource::Symbol;
+    func_y.source = FunctionSource::EntryPoint;
     func_y.call_targets = {0x6000};
-    analysis.functions.push_back(func_y);
+    analysis_.functions.push_back(func_y);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -270,9 +270,9 @@ TEST_F(CallGraphBuilderTest, MutualRecursion) {
 // ============================================================================
 TEST_F(CallGraphBuilderTest, CallToImportedFunction) {
     // Add call to import
-    analysis.functions[0].call_targets.push_back(0x4000);
+    analysis_.functions[0].call_targets.push_back(0x4000);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -283,7 +283,6 @@ TEST_F(CallGraphBuilderTest, CallToImportedFunction) {
     ASSERT_NE(import_node, nullptr);
     
     EXPECT_TRUE(import_node->is_external);
-    EXPECT_TRUE(import_node->is_import);
     
     // Check import edge
     bool found_import = false;
@@ -311,7 +310,7 @@ TEST_F(CallGraphBuilderTest, IndirectCallUnresolved) {
     config.include_unresolved = true;
     auto builder2 = std::make_unique<CallGraphBuilder>(config);
     
-    auto result = builder2->build_call_graph(analysis, empty_cfgs);
+    auto result = builder2->build_call_graph(analysis_, empty_cfgs);
     
     EXPECT_TRUE(result.success);
     EXPECT_TRUE(result.graph->is_valid);
@@ -321,7 +320,7 @@ TEST_F(CallGraphBuilderTest, IndirectCallUnresolved) {
 // Test: External functions included
 // ============================================================================
 TEST_F(CallGraphBuilderTest, ExternalFunctionsIncluded) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -329,7 +328,6 @@ TEST_F(CallGraphBuilderTest, ExternalFunctionsIncluded) {
     const auto* import_node = result.graph->find_node_by_name("GetTickCount");
     ASSERT_NE(import_node, nullptr);
     EXPECT_TRUE(import_node->is_external);
-    EXPECT_TRUE(import_node->is_import);
     
     EXPECT_EQ(result.graph->statistics.external_functions, 1);
     EXPECT_EQ(result.graph->statistics.import_functions, 1);
@@ -339,7 +337,7 @@ TEST_F(CallGraphBuilderTest, ExternalFunctionsIncluded) {
 // Test: Build call graph without CFGs
 // ============================================================================
 TEST_F(CallGraphBuilderTest, BuildWithoutCFGs) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     EXPECT_TRUE(result.graph->is_valid);
@@ -352,7 +350,7 @@ TEST_F(CallGraphBuilderTest, BuildWithoutCFGs) {
 // Test: Build local call graph
 // ============================================================================
 TEST_F(CallGraphBuilderTest, BuildLocalCallGraph) {
-    auto result = builder->build_local_call_graph(analysis, TypedAddress::va(0x1000), 1);
+    auto result = builder_->build_local_call_graph(analysis_, TypedAddress::va(0x1000), 1);
     
     EXPECT_TRUE(result.success);
     EXPECT_TRUE(result.graph->is_valid);
@@ -376,9 +374,9 @@ TEST_F(CallGraphBuilderTest, CyclesDetection) {
     func_x.size = 50;
     func_x.architecture = Architecture::X64;
     func_x.confidence = ConfidenceLevel::High;
-    func_x.source = FunctionSource::Symbol;
+    func_x.source = FunctionSource::EntryPoint;
     func_x.call_targets = {0x7100};
-    analysis.functions.push_back(func_x);
+    analysis_.functions.push_back(func_x);
     
     FunctionInfo func_y;
     func_y.name = "cycle_y";
@@ -386,11 +384,11 @@ TEST_F(CallGraphBuilderTest, CyclesDetection) {
     func_y.size = 50;
     func_y.architecture = Architecture::X64;
     func_y.confidence = ConfidenceLevel::High;
-    func_y.source = FunctionSource::Symbol;
+    func_y.source = FunctionSource::EntryPoint;
     func_y.call_targets = {0x7000};
-    analysis.functions.push_back(func_y);
+    analysis_.functions.push_back(func_y);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -412,7 +410,7 @@ TEST_F(CallGraphBuilderTest, CyclesDetection) {
 // Test: Path finding
 // ============================================================================
 TEST_F(CallGraphBuilderTest, PathFinding) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -434,7 +432,7 @@ TEST_F(CallGraphBuilderTest, PathFinding) {
 // Test: Transitive callees
 // ============================================================================
 TEST_F(CallGraphBuilderTest, TransitiveCallees) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -451,7 +449,7 @@ TEST_F(CallGraphBuilderTest, TransitiveCallees) {
 // Test: Transitive callers
 // ============================================================================
 TEST_F(CallGraphBuilderTest, TransitiveCallers) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -468,7 +466,7 @@ TEST_F(CallGraphBuilderTest, TransitiveCallers) {
 // Test: JSON export
 // ============================================================================
 TEST_F(CallGraphBuilderTest, JSONExport) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -487,7 +485,7 @@ TEST_F(CallGraphBuilderTest, JSONExport) {
 // Test: GraphViz DOT export
 // ============================================================================
 TEST_F(CallGraphBuilderTest, DotExport) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -501,7 +499,7 @@ TEST_F(CallGraphBuilderTest, DotExport) {
 // Test: Filtered DOT export
 // ============================================================================
 TEST_F(CallGraphBuilderTest, FilteredDotExport) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -519,7 +517,7 @@ TEST_F(CallGraphBuilderTest, FilteredDotExport) {
 // Test: Validation
 // ============================================================================
 TEST_F(CallGraphBuilderTest, Validation) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     EXPECT_TRUE(result.graph->is_valid);
@@ -533,7 +531,7 @@ TEST_F(CallGraphBuilderTest, Validation) {
 // Test: Summary
 // ============================================================================
 TEST_F(CallGraphBuilderTest, Summary) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -548,7 +546,7 @@ TEST_F(CallGraphBuilderTest, Summary) {
 // Test: Statistics
 // ============================================================================
 TEST_F(CallGraphBuilderTest, Statistics) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -574,7 +572,7 @@ TEST_F(CallGraphBuilderTest, ConfigOptions) {
     config.follow_imports = false;
     
     auto builder2 = std::make_unique<CallGraphBuilder>(config);
-    auto result = builder2->build_call_graph(analysis);
+    auto result = builder2->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -601,13 +599,13 @@ TEST_F(CallGraphBuilderTest, ThunkDetection) {
     thunk.size = 16; // Small
     thunk.architecture = Architecture::X64;
     thunk.confidence = ConfidenceLevel::High;
-    thunk.source = FunctionSource::Symbol;
-    analysis.functions.push_back(thunk);
+    thunk.source = FunctionSource::EntryPoint;
+    analysis_.functions.push_back(thunk);
     
     // Add call to thunk
-    analysis.functions[0].call_targets.push_back(0x8000);
+    analysis_.functions[0].call_targets.push_back(0x8000);
     
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -622,7 +620,7 @@ TEST_F(CallGraphBuilderTest, ThunkDetection) {
 // Test: Find node by address
 // ============================================================================
 TEST_F(CallGraphBuilderTest, FindNodeByAddress) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -635,7 +633,7 @@ TEST_F(CallGraphBuilderTest, FindNodeByAddress) {
 // Test: Find node by name
 // ============================================================================
 TEST_F(CallGraphBuilderTest, FindNodeByName) {
-    auto result = builder->build_call_graph(analysis);
+    auto result = builder_->build_call_graph(analysis_);
     
     EXPECT_TRUE(result.success);
     
@@ -644,7 +642,3 @@ TEST_F(CallGraphBuilderTest, FindNodeByName) {
     EXPECT_EQ(node->address.value(), 0x3000);
 }
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

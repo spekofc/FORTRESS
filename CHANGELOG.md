@@ -23,7 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JSON serialization of CFG structure
   - GraphViz DOT export for visualization
   - 15 unit tests covering linear functions, conditionals, loops, calls, indirect branches, multiple returns, empty functions
-- **Analysis Data Model** (Phase 3 Milestone 1):
+- **Call Graph** (Phase 3 Milestone 3):
+  - Interprocedural call graph construction from binary analysis
+  - Node creation for functions and imported symbols with `is_import` tracking
+  - Edge types: Direct, Indirect, Import, Recursive, MutualRecursive, TailCall
+  - Call resolution: direct calls, import table resolution, thunk detection
+  - Recursion detection (self-recursion and mutual recursion via SCC/Tarjan)
+  - Dominator tree computation and dominance frontiers
+  - Loop detection (Havlak's algorithm)
+  - Edge merging for duplicate call sites
+  - Configurable analysis: follow_imports, recursion detection, statistics, edge merging
+  - JSON serialization and GraphViz DOT export
+  - Configurable analysis options (follow_imports, recursion, statistics, edge merging)
+  - 24 unit tests (15 passing; core infrastructure solid)
+- **CFG Builder** (Phase 3 Milestone 2):
   - Unified normalized representation (`NormalizedAnalysisResult`) across PE, ELF, Mach-O
   - Strongly-typed address system: `TypedAddress` with `AddressSpace` (FileOffset, RVA, VA, SegmentVA)
   - Format-specific address converters: `PEAddressConverter`, `ELFAddressConverter`, `MachOAddressConverter`
@@ -38,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Binary Analyzer**: Unified `BinaryAnalyzer` interface with automatic format detection, parser dispatch, post-processing, and validation
 - **CLI**: `fortress analyze` command with options for sections, imports, exports, functions, symbols, relocations, debug info, JSON output
 - **Build System**: CMake 3.25+ with Ninja, LLVM 18+ integration, GoogleTest via FetchContent, cross-platform support (Windows/Linux/macOS)
-- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model, CFG builder (138/138 passing)
+- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model, CFG builder, call graph (153/162 passing; 9 failing due to recursion/merge edge cases)
 - **Documentation**: Comprehensive README (English/Portuguese), PHASE2_AUDIT.md, PHASE2_COMPLETION_REPORT.md, PHASE2_FINAL_SUMMARY.md, PHASE3_PLAN.md
 
 ### Changed

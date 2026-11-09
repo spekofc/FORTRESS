@@ -339,7 +339,10 @@ void CallGraph::compute_statistics() {
         switch (edge.type) {
             case CallEdgeType::Direct: statistics.direct_calls++; break;
             case CallEdgeType::Indirect: statistics.indirect_calls++; break;
-            case CallEdgeType::Import: statistics.import_functions++; break;
+            case CallEdgeType::Import: 
+                statistics.direct_calls++;  // Import calls are also direct calls
+                statistics.import_functions++; 
+                break;
             case CallEdgeType::TailCall: statistics.tail_calls++; break;
             default: break;
         }
@@ -553,7 +556,7 @@ CallGraphResult CallGraphBuilder::build_call_graph(const BinaryAnalysisResult& a
     auto graph = std::make_unique<CallGraph>();
     ctx.graph = graph.get();
     
-    bool success = build_call_graph_internal(analysis, cfgs, ctx);
+    bool success = build_call_graph_internal(analysis, cfgs, ctx, *graph);
     if (success) {
         return CallGraphResult(std::move(graph));
     } else {
@@ -667,15 +670,17 @@ CallGraphResult CallGraphBuilder::build_local_call_graph(const BinaryAnalysisRes
     return CallGraphResult(std::move(filtered));
 }
 
-bool CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& analysis, const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs, BuildContext& ctx) {
+bool CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& analysis, const std::vector<std::unique_ptr<ControlFlowGraph>>& cfgs, BuildContext& ctx, CallGraph& graph) {
     for (const auto& func : analysis.functions) {
         create_or_get_node(ctx, const_cast<FunctionInfo*>(&func), false);
     }
     
-    for (const auto& import : analysis.imports) {
-        for (const auto& sym : import.functions) {
-            if (sym.address != 0) {
-                create_external_node(ctx, TypedAddress::va(sym.address), sym.name, sym.name);
+    if (config_.follow_imports) {
+        for (const auto& import : analysis.imports) {
+            for (const auto& sym : import.functions) {
+                if (sym.address != 0) {
+                    create_external_node(ctx, TypedAddress::va(sym.address), sym.name, sym.name, true);
+                }
             }
         }
     }
@@ -693,8 +698,12 @@ bool CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& ana
             if (target.function) {
                 dst_id = create_or_get_node(ctx, target.function, target.is_external);
             } else if (target.address.valid()) {
+                // Skip import nodes if follow_imports is false
+                if (resolution.edge_type == CallEdgeType::Import && !config_.follow_imports) {
+                    continue;
+                }
                 dst_id = create_external_node(ctx, target.address, "unknown_" + 
-                    std::to_string(target.address.value()), target.symbol_name);
+                    std::to_string(target.address.value()), target.symbol_name, target.is_import);
             }
             
             if (dst_id != UINT32_MAX) {
@@ -717,16 +726,16 @@ bool CallGraphBuilder::build_call_graph_internal(const BinaryAnalysisResult& ana
     }
     
     if (config_.compute_statistics) {
-        ctx.graph->compute_statistics();
+        graph.compute_statistics();
     }
     
     std::string validation_error;
-    if (!validate_graph(*ctx.graph, validation_error)) {
-        ctx.graph->is_valid = false;
-        ctx.graph->error_message = "Call graph validation failed: " + validation_error;
+    if (!validate_graph(graph, validation_error)) {
+        graph.is_valid = false;
+        graph.error_message = "Call graph validation failed: " + validation_error;
         return false;
     } else {
-        ctx.graph->is_valid = true;
+        graph.is_valid = true;
     }
     
     return true;
@@ -756,7 +765,8 @@ uint32_t CallGraphBuilder::create_or_get_node(BuildContext& ctx, FunctionInfo* f
 }
 
 uint32_t CallGraphBuilder::create_external_node(BuildContext& ctx, TypedAddress address, 
-                                                 const std::string& name, const std::string& symbol_name) {
+                                                 const std::string& name, const std::string& symbol_name,
+                                                 bool is_import) {
     (void)symbol_name;
     
     auto it = ctx.graph->address_to_node.find(address.value());
@@ -768,6 +778,7 @@ uint32_t CallGraphBuilder::create_external_node(BuildContext& ctx, TypedAddress 
     CallGraphNode node(id, nullptr, name);
     node.address = address;
     node.is_external = true;
+    node.is_import = is_import;
     node.is_entry_point = false;
     
     ctx.graph->nodes.push_back(std::move(node));
@@ -858,6 +869,8 @@ void CallGraphBuilder::merge_edges(BuildContext& ctx) {
         
         update_refs(node.outgoing_edges);
         update_refs(node.incoming_edges);
+        update_refs(node.callees);
+        update_refs(node.callers);
     }
     
     ctx.graph->edges = std::move(merged_edges);
@@ -1205,6 +1218,20 @@ void CallGraphBuilder::identify_mutual_recursion(BuildContext& ctx) {
     for (const auto& scc : sccs) {
         for (uint32_t node_id : scc) {
             ctx.graph->nodes[node_id].is_mutual_recursive = true;
+        }
+        
+        // Update edge types within the SCC to MutualRecursive
+        for (uint32_t src_id : scc) {
+            for (uint32_t edge_id : ctx.graph->nodes[src_id].outgoing_edges) {
+                if (edge_id < ctx.graph->edges.size()) {
+                    auto& edge = ctx.graph->edges[edge_id];
+                    // If target is also in the SCC, mark as mutual recursive
+                    if (std::find(scc.begin(), scc.end(), edge.target_node_id) != scc.end()) {
+                        edge.type = CallEdgeType::MutualRecursive;
+                        edge.is_recursive = true;
+                    }
+                }
+            }
         }
     }
 }

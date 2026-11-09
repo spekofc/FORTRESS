@@ -29,6 +29,7 @@ add_executable(fortress_tests
     unit/test_macho.cpp
     unit/test_analysis_model.cpp
     unit/test_cfg.cpp
+    unit/test_call_graph.cpp
 )
 
 target_link_libraries(fortress_tests PRIVATE
