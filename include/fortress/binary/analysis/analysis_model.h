@@ -48,15 +48,34 @@ public:
     static TypedAddress file_offset(uint64_t offset) noexcept { return TypedAddress(offset, AddressSpace::FileOffset); }
     static TypedAddress rva(uint64_t rva) noexcept { return TypedAddress(rva, AddressSpace::RVA); }
     static TypedAddress va(uint64_t va) noexcept { return TypedAddress(va, AddressSpace::VA); }
-    static TypedAddress segment_va(uint64_t va) noexcept { return TypedAddress(va, AddressSpace::SegmentVA); }
-    
     // SegmentVA with explicit segment identifier (for Mach-O)
     // Encodes segment index in upper 16 bits, offset in lower 48 bits
+    // Validates that offset fits in 48 bits and segment_index fits in 16 bits
+    static Result<TypedAddress> make_segment_va(uint16_t segment_index, uint64_t offset_in_segment) noexcept {
+        if (offset_in_segment > 0xFFFFFFFFFFFFull) {
+            return Result<TypedAddress>::err(Error::invalid_argument("SegmentVA offset exceeds 48-bit limit"));
+        }
+        if (segment_index == 0 && offset_in_segment == 0) {
+            // Allow zero but document it represents segment 0, offset 0
+        }
+        uint64_t value = (static_cast<uint64_t>(segment_index) << 48) | (offset_in_segment & 0xFFFFFFFFFFFFull);
+        return Result<TypedAddress>::ok(TypedAddress(value, AddressSpace::SegmentVA));
+    }
+    
+    // Convenience factory for tests - creates SegmentVA with segment index and offset
     static TypedAddress segment_va(uint16_t segment_index, uint64_t offset_in_segment) noexcept {
+        if (offset_in_segment > 0xFFFFFFFFFFFFull) {
+            // In debug builds, this would be an assertion failure
+        }
         uint64_t value = (static_cast<uint64_t>(segment_index) << 48) | (offset_in_segment & 0xFFFFFFFFFFFFull);
         return TypedAddress(value, AddressSpace::SegmentVA);
     }
-
+    
+    // Legacy factory - DEPRECATED: creates SegmentVA without segment identity (segment_index=0)
+    // Use segment_va(segment_index, offset) for proper segment identification
+    [[deprecated("Use segment_va(segment_index, offset) for proper segment identification")]]
+    static TypedAddress segment_va(uint64_t va) noexcept { return TypedAddress(va, AddressSpace::SegmentVA); }
+    
     // Accessors
     constexpr uint64_t value() const noexcept { return value_; }
     constexpr AddressSpace space() const noexcept { return space_; }

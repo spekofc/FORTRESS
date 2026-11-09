@@ -63,7 +63,10 @@ public:
 
         // FileOffset <-> RVA (using section mapping)
         if (from.space() == AddressSpace::FileOffset && to_space == AddressSpace::RVA) {
-            for (const auto& sec : sections_) {
+            std::vector<std::pair<uint64_t, size_t>> matches; // {rva, section_index}
+            
+            for (size_t i = 0; i < sections_.size(); ++i) {
+                const auto& sec = sections_[i];
                 if (sec.contains_file_offset(from)) {
                     uint64_t offset_in_section = from.value() - sec.file_offset.value();
                     // Check if offset exceeds raw_size (file-backed data)
@@ -80,17 +83,28 @@ public:
                         result.error = "RVA calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::rva(sec.rva.value() + offset_in_section);
-                    result.success = true;
-                    return result;
+                    matches.push_back({sec.rva.value() + offset_in_section, i});
                 }
             }
-            result.error = "File offset not within any section";
+            
+            if (matches.empty()) {
+                result.error = "File offset not within any section";
+                return result;
+            }
+            if (matches.size() > 1) {
+                result.error = "Ambiguous FileOffset -> RVA conversion: multiple matching sections";
+                return result;
+            }
+            result.address = TypedAddress::rva(matches[0].first);
+            result.success = true;
             return result;
         }
 
         if (from.space() == AddressSpace::RVA && to_space == AddressSpace::FileOffset) {
-            for (const auto& sec : sections_) {
+            std::vector<std::pair<uint64_t, size_t>> matches; // {file_offset, section_index}
+            
+            for (size_t i = 0; i < sections_.size(); ++i) {
+                const auto& sec = sections_[i];
                 // Check if RVA falls within this section's virtual range (overflow-safe)
                 uint64_t sec_rva = sec.rva.value();
                 uint64_t sec_virtual_size = sec.virtual_size;
@@ -100,22 +114,30 @@ public:
                 }
                 uint64_t sec_virtual_end = sec_rva + sec_virtual_size;
                 if (from.value() >= sec_rva && from.value() < sec_virtual_end) {
-                    uint64_t offset_in_section = from.value() - sec.rva.value();
+                    uint64_t offset_in_section = from.value() - sec_rva;
                     // Only allow conversion if the data is file-backed
                     if (offset_in_section >= sec.raw_size) {
-                        result.error = "RVA points to virtual-only region (BSS/zero-filled), no file offset";
+                        result.error = "RVA points to virtual-only region, no file offset";
                         return result;
                     }
                     if (offset_in_section > std::numeric_limits<uint64_t>::max() - sec.file_offset.value()) {
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
-                    result.success = true;
-                    return result;
+                    matches.push_back({sec.file_offset.value() + offset_in_section, i});
                 }
             }
-            result.error = "RVA not within any section";
+            
+            if (matches.empty()) {
+                result.error = "RVA not within any section";
+                return result;
+            }
+            if (matches.size() > 1) {
+                result.error = "Ambiguous RVA -> FileOffset conversion: multiple matching sections";
+                return result;
+            }
+            result.address = TypedAddress::file_offset(matches[0].first);
+            result.success = true;
             return result;
         }
 

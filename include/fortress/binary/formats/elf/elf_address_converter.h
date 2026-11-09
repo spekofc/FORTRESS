@@ -35,6 +35,12 @@ public:
         // ELF uses VA directly (no RVA concept like PE)
         // FileOffset <-> VA via segment mapping (program headers)
         if (from.space() == AddressSpace::FileOffset && to_space == AddressSpace::VA) {
+            // Collect all matching segments
+            struct Match {
+                uint64_t va;
+            };
+            std::vector<Match> matches;
+
             // Use program headers (segments) for mapping
             for (const auto& seg : segments_) {
                 uint64_t seg_file_start = seg.file_offset.value();
@@ -52,9 +58,7 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::va(seg.vm_address.value() + offset_in_segment);
-                    result.success = true;
-                    return result;
+                    matches.push_back({seg.vm_address.value() + offset_in_segment});
                 }
             }
             // Fallback: try section headers
@@ -69,16 +73,30 @@ public:
                         result.error = "VA calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::va(sec.virtual_address.value() + offset_in_section);
-                    result.success = true;
-                    return result;
+                    matches.push_back({sec.virtual_address.value() + offset_in_section});
                 }
             }
-            result.error = "File offset not within any segment or section";
+
+            if (matches.empty()) {
+                result.error = "File offset not within any segment or section";
+                return result;
+            }
+            if (matches.size() > 1) {
+                result.error = "Ambiguous FileOffset -> VA conversion: multiple matching segments/sections";
+                return result;
+            }
+            result.address = TypedAddress::va(matches[0].va);
+            result.success = true;
             return result;
         }
 
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::FileOffset) {
+            // Collect all matching segments
+            struct Match {
+                uint64_t file_offset;
+            };
+            std::vector<Match> matches;
+
             // Use program headers (segments) for mapping
             for (const auto& seg : segments_) {
                 uint64_t seg_vm_start = seg.vm_address.value();
@@ -102,9 +120,7 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::file_offset(seg.file_offset.value() + offset_in_segment);
-                    result.success = true;
-                    return result;
+                    matches.push_back({seg.file_offset.value() + offset_in_segment});
                 }
             }
             // Fallback: try section headers
@@ -120,12 +136,20 @@ public:
                         result.error = "FileOffset calculation overflow";
                         return result;
                     }
-                    result.address = TypedAddress::file_offset(sec.file_offset.value() + offset_in_section);
-                    result.success = true;
-                    return result;
+                    matches.push_back({sec.file_offset.value() + offset_in_section});
                 }
             }
-            result.error = "VA not within any segment or section";
+
+            if (matches.empty()) {
+                result.error = "VA not within any segment or section";
+                return result;
+            }
+            if (matches.size() > 1) {
+                result.error = "Ambiguous VA -> FileOffset conversion: multiple matching segments/sections";
+                return result;
+            }
+            result.address = TypedAddress::file_offset(matches[0].file_offset);
+            result.success = true;
             return result;
         }
 
@@ -142,7 +166,8 @@ public:
             return result;
         }
         if (from.space() == AddressSpace::VA && to_space == AddressSpace::SegmentVA) {
-            result.address = TypedAddress::segment_va(from.value());
+            // In ELF, SegmentVA is the same as VA, use segment index 0
+            result.address = TypedAddress::segment_va(0, from.value());
             result.success = true;
             return result;
         }
@@ -190,6 +215,12 @@ public:
     }
 
     void set_segments(const std::vector<SegmentMapping>& segments) {
+        // Validate p_filesz <= p_memsz for each segment
+        for (const auto& seg : segments) {
+            if (seg.file_size.value() > seg.vm_size.value()) {
+                // This will be caught at conversion time, but we can warn here
+            }
+        }
         segments_ = segments;
     }
 

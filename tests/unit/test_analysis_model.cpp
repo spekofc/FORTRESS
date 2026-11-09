@@ -29,9 +29,11 @@ TEST(AnalysisModel, TypedAddress_FactoryMethods) {
     EXPECT_EQ(va.value(), 0x400000);
     EXPECT_EQ(va.space(), AddressSpace::VA);
 
-    auto seg_va = TypedAddress::segment_va(0x1000);
-    EXPECT_EQ(seg_va.value(), 0x1000);
+    auto seg_va = TypedAddress::segment_va(0, 0x1000);
+    EXPECT_EQ(seg_va.value(), (static_cast<uint64_t>(0) << 48) | 0x1000);
     EXPECT_EQ(seg_va.space(), AddressSpace::SegmentVA);
+    EXPECT_EQ(seg_va.segment_index(), 0);
+    EXPECT_EQ(seg_va.segment_offset(), 0x1000);
 }
 
 TEST(AnalysisModel, TypedAddress_Equality) {
@@ -51,7 +53,7 @@ TEST(AnalysisModel, TypedAddress_ToString) {
     auto fo = TypedAddress::file_offset(0x1000);
     auto rva = TypedAddress::rva(0x2000);
     auto va = TypedAddress::va(0x400000);
-    auto seg_va = TypedAddress::segment_va(0x1000);
+    auto seg_va = TypedAddress::segment_va(0, 0x1000);
 
     EXPECT_EQ(fo.to_string(), "FO:0x1000");
     EXPECT_EQ(rva.to_string(), "RVA:0x2000");
@@ -321,7 +323,7 @@ TEST(AnalysisModel, ELFAddressConverter_SegmentVA_VA) {
     ELFAddressConverter converter(sections, segments);
 
     // SegmentVA -> VA (same in ELF)
-    auto seg_va = TypedAddress::segment_va(0x1000);
+    auto seg_va = TypedAddress::segment_va(0, 0x1000);
     auto va_result = converter.convert(seg_va, AddressSpace::VA);
     EXPECT_TRUE(va_result.success);
     EXPECT_EQ(va_result.address.value(), 0x1000);
@@ -1248,11 +1250,11 @@ TEST(AnalysisModel, MachO_SegmentVA_Ambiguous) {
     
     MachOAddressConverter converter(sections, segments);
     
-    // VA in the overlapping region
+    // VA in the overlapping region - should be ambiguous
     auto va = TypedAddress::va(0x100001000);
     auto result = converter.convert(va, AddressSpace::SegmentVA);
-    // Should find first matching segment
-    EXPECT_TRUE(result.success);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("Ambiguous"), std::string::npos);
 }
 
 // --- Section Boundary Tests ---
@@ -1441,10 +1443,18 @@ TEST(AnalysisModel, PE_OverlappingSections) {
     
     PEAddressConverter converter(0x400000, sections);
     
-    // FileOffset in overlapping region - first match wins
+    // FileOffset in overlapping region - should be ambiguous
     auto fo = TypedAddress::file_offset(0x2500);
     auto result = converter.convert(fo, AddressSpace::RVA);
-    EXPECT_TRUE(result.success);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("Ambiguous"), std::string::npos);
+    
+    // Non-overlapping should still work
+    auto fo2 = TypedAddress::file_offset(0x1500);
+    auto result2 = converter.convert(fo2, AddressSpace::RVA);
+    EXPECT_TRUE(result2.success);
+    EXPECT_EQ(result2.address.value(), 0x1500); // RVA, not VA
+    EXPECT_EQ(result2.address.space(), AddressSpace::RVA);
 }
 
 TEST(AnalysisModel, MachO_OverlappingSegments) {
@@ -1469,10 +1479,18 @@ TEST(AnalysisModel, MachO_OverlappingSegments) {
     
     MachOAddressConverter converter({}, segments);
     
-    // VA in overlapping region - first match wins
+    // VA in overlapping region - should be ambiguous
     auto va = TypedAddress::va(0x100001500);
     auto result = converter.convert(va, AddressSpace::SegmentVA);
-    EXPECT_TRUE(result.success);
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error.find("Ambiguous"), std::string::npos);
+    
+    // Non-overlapping should still work
+    auto va2 = TypedAddress::va(0x100000500);
+    auto result2 = converter.convert(va2, AddressSpace::SegmentVA);
+    EXPECT_TRUE(result2.success);
+    EXPECT_EQ(result2.address.segment_index(), 0);
+    EXPECT_EQ(result2.address.segment_offset(), 0x500);
 }
 
 // --- Empty/Zero-Size Tests ---
