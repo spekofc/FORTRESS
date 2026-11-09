@@ -330,9 +330,11 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
     ctx.load_commands = reinterpret_cast<const LoadCommand*>(lc_ptr);
 
     for (uint32_t i = 0; i < ncmds && lc_ptr < end; ++i) {
-        const LoadCommand* lc = reinterpret_cast<const LoadCommand*>(lc_ptr);
-        uint32_t cmd = maybe_bswap(lc->cmd, !ctx.is_little_endian);
-        uint32_t cmdsize = maybe_bswap(lc->cmdsize, !ctx.is_little_endian);
+        // Read directly from byte stream to avoid struct layout issues
+        uint32_t raw_cmd = read_value<uint32_t>(lc_ptr);
+        uint32_t raw_cmdsize = read_value<uint32_t>(lc_ptr + 4);
+        uint32_t cmd = maybe_bswap(raw_cmd, !ctx.is_little_endian);
+        uint32_t cmdsize = maybe_bswap(raw_cmdsize, !ctx.is_little_endian);
 
         if (cmdsize < sizeof(LoadCommand) || lc_ptr + cmdsize > end) {
             ctx.warnings.push_back("Invalid load command size at index " + std::to_string(i));
@@ -340,7 +342,7 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
         }
 
         switch (cmd & 0x7FFFFFFF) { // Ignore LC_REQ_DYLD bit
-            case LC_SEGMENT: {
+            case (LC_SEGMENT & 0x7FFFFFFF): {
                 if (ctx.is_64bit) {
                     ctx.warnings.push_back("LC_SEGMENT in 64-bit Mach-O");
                 } else {
@@ -348,7 +350,7 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
                 }
                 break;
             }
-            case LC_SEGMENT_64: {
+            case (LC_SEGMENT_64 & 0x7FFFFFFF): {
                 if (!ctx.is_64bit) {
                     ctx.warnings.push_back("LC_SEGMENT_64 in 32-bit Mach-O");
                 } else {
@@ -356,89 +358,89 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
                 }
                 break;
             }
-            case LC_SYMTAB: {
+            case (LC_SYMTAB & 0x7FFFFFFF): {
                 ctx.symtab = reinterpret_cast<const SymtabCommand*>(lc_ptr);
                 break;
             }
-            case LC_DYSYMTAB: {
+            case (LC_DYSYMTAB & 0x7FFFFFFF): {
                 ctx.dysymtab = reinterpret_cast<const DysymtabCommand*>(lc_ptr);
                 break;
             }
-            case LC_LOAD_DYLIB:
-            case LC_ID_DYLIB:
-            case LC_LOAD_WEAK_DYLIB:
-            case LC_REEXPORT_DYLIB:
-            case LC_LOAD_UPWARD_DYLIB: {
+            case (LC_LOAD_DYLIB & 0x7FFFFFFF):
+            case (LC_ID_DYLIB & 0x7FFFFFFF):
+            case (LC_LOAD_WEAK_DYLIB & 0x7FFFFFFF):
+            case (LC_REEXPORT_DYLIB & 0x7FFFFFFF):
+            case (LC_LOAD_UPWARD_DYLIB & 0x7FFFFFFF): {
                 ctx.dylibs.push_back(reinterpret_cast<const DylibCommand*>(lc_ptr));
                 break;
             }
-            case LC_LOAD_DYLINKER:
-            case LC_ID_DYLINKER: {
+            case (LC_LOAD_DYLINKER & 0x7FFFFFFF):
+            case (LC_ID_DYLINKER & 0x7FFFFFFF): {
                 // Dylinker info
                 break;
             }
-            case LC_UUID: {
+            case (LC_UUID & 0x7FFFFFFF): {
                 ctx.uuid_cmd = reinterpret_cast<const UuidCommand*>(lc_ptr);
                 break;
             }
-            case LC_MAIN: {
+            case (LC_MAIN & 0x7FFFFFFF): {
+                ctx.warnings.push_back("Found LC_MAIN command");
                 ctx.main_cmd = reinterpret_cast<const MainCommand*>(lc_ptr);
                 break;
             }
-            case LC_UNIXTHREAD:
-            case LC_THREAD: {
+            case (LC_UNIXTHREAD & 0x7FFFFFFF):
+            case (LC_THREAD & 0x7FFFFFFF): {
                 ctx.thread_cmd = reinterpret_cast<const ThreadCommand*>(lc_ptr);
                 break;
             }
-            case LC_RPATH: {
+            case (LC_RPATH & 0x7FFFFFFF): {
                 const DylibCommand* rpath = reinterpret_cast<const DylibCommand*>(lc_ptr);
                 uint32_t name_off = maybe_bswap(rpath->dylib_name_offset, !ctx.is_little_endian);
                 const std::byte* name_ptr = lc_ptr + name_off;
                 ctx.rpaths.push_back(read_cstring(name_ptr));
                 break;
             }
-            case LC_FUNCTION_STARTS: {
+            case (LC_FUNCTION_STARTS & 0x7FFFFFFF): {
                 ctx.func_starts = reinterpret_cast<const FunctionStartsCommand*>(lc_ptr);
                 break;
             }
-            case LC_DATA_IN_CODE: {
+            case (LC_DATA_IN_CODE & 0x7FFFFFFF): {
                 ctx.data_in_code = reinterpret_cast<const DataInCodeCommand*>(lc_ptr);
                 break;
             }
-            case LC_CODE_SIGNATURE: {
+            case (LC_CODE_SIGNATURE & 0x7FFFFFFF): {
                 ctx.code_sig = reinterpret_cast<const LinkeditDataCommand*>(lc_ptr);
                 break;
             }
-            case LC_DYLD_INFO:
-            case LC_DYLD_INFO_ONLY: {
+            case (LC_DYLD_INFO & 0x7FFFFFFF): {
                 ctx.dyld_info = reinterpret_cast<const LinkeditDataCommand*>(lc_ptr);
                 break;
             }
-            case LC_DYLD_CHAINED_FIXUPS: {
+            case (LC_DYLD_CHAINED_FIXUPS & 0x7FFFFFFF): {
                 ctx.chained_fixups = reinterpret_cast<const LinkeditDataCommand*>(lc_ptr);
                 break;
             }
-            case LC_BUILD_VERSION: {
+            case (LC_BUILD_VERSION & 0x7FFFFFFF): {
                 ctx.build_version = reinterpret_cast<const BuildVersionCommand*>(lc_ptr);
                 break;
             }
-            case LC_SEGMENT_SPLIT_INFO:
-            case LC_LINKER_OPTION:
-            case LC_LINKER_OPTIMIZATION_HINT:
-            case LC_SOURCE_VERSION:
-            case LC_DYLIB_CODE_SIGN_DRS:
-            case LC_ENCRYPTION_INFO:
-            case LC_ENCRYPTION_INFO_64:
-            case LC_VERSION_MIN_MACOSX:
-            case LC_VERSION_MIN_IPHONEOS:
-            case LC_VERSION_MIN_TVOS:
-            case LC_VERSION_MIN_WATCHOS:
-            case LC_NOTE:
-            case LC_DYLD_EXPORTS_TRIE:
-            case LC_DYLD_ENVIRONMENT:
-            case LC_ROUTINES:
-            case LC_ROUTINES_64:
-            case LC_PREBOUND_DYLIB:
+            case (LC_SEGMENT_SPLIT_INFO & 0x7FFFFFFF):
+            case (LC_LINKER_OPTION & 0x7FFFFFFF):
+            case (LC_LINKER_OPTIMIZATION_HINT & 0x7FFFFFFF):
+            case (LC_SOURCE_VERSION & 0x7FFFFFFF):
+            case (LC_DYLIB_CODE_SIGN_DRS & 0x7FFFFFFF):
+            case (LC_ENCRYPTION_INFO & 0x7FFFFFFF):
+            case (LC_ENCRYPTION_INFO_64 & 0x7FFFFFFF):
+            case (LC_VERSION_MIN_MACOSX & 0x7FFFFFFF):
+            case (LC_VERSION_MIN_IPHONEOS & 0x7FFFFFFF):
+            case (LC_VERSION_MIN_TVOS & 0x7FFFFFFF):
+            case (LC_VERSION_MIN_WATCHOS & 0x7FFFFFFF):
+            case (LC_NOTE & 0x7FFFFFFF):
+            case (LC_DYLD_EXPORTS_TRIE & 0x7FFFFFFF):
+            case (LC_DYLD_ENVIRONMENT & 0x7FFFFFFF):
+            case (LC_ROUTINES & 0x7FFFFFFF):
+            case (LC_ROUTINES_64 & 0x7FFFFFFF):
+            case (LC_PREBOUND_DYLIB & 0x7FFFFFFF):
             case LC_TWOLEVEL_HINTS:
             case LC_PREBIND_CKSUM:
             case LC_SUB_FRAMEWORK:
@@ -447,9 +449,9 @@ Result<void> MachOParser::parse_load_commands(Context& ctx) {
             case LC_SUB_LIBRARY:
             case LC_IDENT:
             case LC_PREPAGE:
-            case LC_LOADFVMLIB:
-            case LC_IDFVMLIB:
-            case LC_FVMFILE:
+            case (LC_LOADFVMLIB & 0x7FFFFFFF):
+            case (LC_IDFVMLIB & 0x7FFFFFFF):
+            case (LC_FVMFILE & 0x7FFFFFFF):
             default:
                 // Ignore unknown
                 break;
@@ -725,14 +727,16 @@ Result<void> MachOParser::parse_entry_point(Context& ctx) {
         uint64_t entryoff = maybe_bswap(ctx.main_cmd->entryoff, !ctx.is_little_endian);
         // Entry is offset from start of __TEXT
         for (const auto* seg : ctx.segments64) {
-            if (std::string_view(seg->segname, 16).find("__TEXT") == 0) {
+            std::string_view segname(seg->segname, 16);
+            if (segname.find("__TEXT") == 0) {
                 ctx.result->entry_point = seg->vmaddr + entryoff;
                 ctx.result->entry_point_offset = seg->fileoff + entryoff;
                 break;
             }
         }
         for (const auto* seg : ctx.segments32) {
-            if (std::string_view(seg->segname, 16).find("__TEXT") == 0) {
+            std::string_view segname(seg->segname, 16);
+            if (segname.find("__TEXT") == 0) {
                 ctx.result->entry_point = seg->vmaddr + entryoff;
                 ctx.result->entry_point_offset = seg->fileoff + entryoff;
                 break;
@@ -785,13 +789,29 @@ Result<void> MachOParser::discover_functions(Context& ctx) {
 
     // 2. Entry point
     if (ctx.result->entry_point != 0) {
-        FunctionInfo fn;
-        fn.address = ctx.result->entry_point;
-        fn.name = "main";
-        fn.architecture = ctx.result->architecture;
-        fn.confidence = ConfidenceLevel::Confirmed;
-        fn.source = FunctionSource::EntryPoint;
-        ctx.result->functions.push_back(fn);
+        // Check if there's already a function at the entry point address
+        bool has_entry_func = false;
+        for (auto& fn : ctx.result->functions) {
+            if (fn.address == ctx.result->entry_point) {
+                has_entry_func = true;
+                // Upgrade source to EntryPoint if it was from symbol table
+                if (fn.source == FunctionSource::SymbolTable || fn.source == FunctionSource::ImportThunk) {
+                    fn.source = FunctionSource::EntryPoint;
+                    fn.confidence = ConfidenceLevel::Confirmed;
+                    fn.name = "main";
+                }
+                break;
+            }
+        }
+        if (!has_entry_func) {
+            FunctionInfo fn;
+            fn.address = ctx.result->entry_point;
+            fn.name = "main";
+            fn.architecture = ctx.result->architecture;
+            fn.confidence = ConfidenceLevel::Confirmed;
+            fn.source = FunctionSource::EntryPoint;
+            ctx.result->functions.push_back(fn);
+        }
     }
 
     return Result<void>::ok();

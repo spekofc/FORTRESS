@@ -46,11 +46,11 @@ TEST(BinaryAnalyzer, DetectELF) {
 
 TEST(BinaryAnalyzer, DetectMachO32) {
     std::vector<std::byte> data(64, std::byte{0});
-    // MH_MAGIC (little endian)
-    data[0] = std::byte{0xFE};
-    data[1] = std::byte{0xED};
-    data[2] = std::byte{0xFA};
-    data[3] = std::byte{0xCE};
+    // MH_MAGIC (little-endian: CE FA ED FE)
+    data[0] = std::byte{0xCE};
+    data[1] = std::byte{0xFA};
+    data[2] = std::byte{0xED};
+    data[3] = std::byte{0xFE};
 
     auto fmt = BinaryAnalyzer::detect_format(data);
     ASSERT_TRUE(fmt);
@@ -59,11 +59,11 @@ TEST(BinaryAnalyzer, DetectMachO32) {
 
 TEST(BinaryAnalyzer, DetectMachO64) {
     std::vector<std::byte> data(64, std::byte{0});
-    // MH_MAGIC_64
-    data[0] = std::byte{0xFE};
-    data[1] = std::byte{0xED};
-    data[2] = std::byte{0xFA};
-    data[3] = std::byte{0xCF};
+    // MH_MAGIC_64 (little-endian: CF FA ED FE)
+    data[0] = std::byte{0xCF};
+    data[1] = std::byte{0xFA};
+    data[2] = std::byte{0xED};
+    data[3] = std::byte{0xFE};
 
     auto fmt = BinaryAnalyzer::detect_format(data);
     ASSERT_TRUE(fmt);

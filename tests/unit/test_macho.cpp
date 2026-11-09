@@ -145,7 +145,9 @@ static std::vector<std::byte> create_minimal_macho64() {
 }
 
 static std::vector<std::byte> create_minimal_macho32() {
-    std::vector<std::byte> data(4096, std::byte{0});
+    // Need enough space for: header (28) + load commands (~100) + text (0x1000) + symtab (0x100) + strtab (0x100)
+    // symoff=0x4000, stroff=0x4100, so need at least 0x4200 bytes
+    std::vector<std::byte> data(0x5000, std::byte{0});
     auto* ptr = data.data();
 
     auto* hdr = reinterpret_cast<macho::MachHeader*>(ptr);
