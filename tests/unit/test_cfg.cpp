@@ -11,8 +11,36 @@
 
 using namespace fortress;
 
-// Mock disassembler for testing - must inherit from CFGBuilder's internal Disassembler
-// We'll use a custom approach: create a test-specific builder that uses our mock
+// Stub disassembler for testing (matches fortress::Disassembler interface)
+class StubDisassembler : public Disassembler {
+public:
+    bool disassemble(const std::vector<uint8_t>& code, uint64_t base_address,
+                      std::vector<InstructionInfo>& instructions) const override {
+        if (code.empty()) return false;
+        
+        size_t offset = 0;
+        while (offset < code.size()) {
+            InstructionInfo instr;
+            instr.offset = offset;
+            instr.address = base_address + offset;
+            instr.size = 1;
+            instr.mnemonic = "nop";
+            instr.operands = "";
+            instr.bytes = {code[offset]};
+            instr.is_call = false;
+            instr.is_jump = false;
+            instr.is_conditional_jump = false;
+            instr.is_return = false;
+            instr.is_indirect = false;
+            instructions.push_back(instr);
+            offset += 1;
+            if (offset >= code.size()) break;
+        }
+        return true;
+    }
+    
+    size_t get_max_instruction_size() const override { return 15; }
+};
 
 // Helper to create test function
 FunctionInfo make_test_function(const std::string& name, uint64_t address, uint64_t size = 100) {
@@ -56,6 +84,8 @@ protected:
         config.max_total_instructions = 1000;
         
         builder = std::make_unique<CFGBuilder>(config);
+        // Explicitly inject stub disassembler for testing
+        builder->set_disassembler(std::make_shared<StubDisassembler>());
         
         analysis = make_test_analysis();
         code_bytes.resize(0x1000, 0x90); // NOPs
@@ -212,6 +242,7 @@ TEST_F(CFGBuilderTest, ConfigOptions) {
     custom_config.treat_return_as_block_end = false;
     
     auto custom_builder = std::make_unique<CFGBuilder>(custom_config);
+    custom_builder->set_disassembler(std::make_shared<StubDisassembler>());
     
     auto function = make_test_function("config_func", 0x1000, 10);
     analysis.functions.clear();
@@ -334,6 +365,7 @@ TEST_F(CFGBuilderTest, DominatorTreeEnabled) {
     dom_config.compute_dominators = true;
     
     auto dom_builder = std::make_unique<CFGBuilder>(dom_config);
+    dom_builder->set_disassembler(std::make_shared<StubDisassembler>());
     
     auto function = make_test_function("dom_func", 0x1000, 10);
     analysis.functions.clear();
@@ -362,6 +394,7 @@ TEST_F(CFGBuilderTest, UnreachableBlocksEnabled) {
     unreach_config.identify_unreachable = true;
     
     auto unreach_builder = std::make_unique<CFGBuilder>(unreach_config);
+    unreach_builder->set_disassembler(std::make_shared<StubDisassembler>());
     
     auto function = make_test_function("unreach_func", 0x1000, 10);
     analysis.functions.clear();
@@ -385,6 +418,7 @@ TEST_F(CFGBuilderTest, LoopDetectionEnabled) {
     loop_config.identify_loops = true;
     
     auto loop_builder = std::make_unique<CFGBuilder>(loop_config);
+    loop_builder->set_disassembler(std::make_shared<StubDisassembler>());
     
     auto function = make_test_function("loop_func", 0x1000, 10);
     analysis.functions.clear();

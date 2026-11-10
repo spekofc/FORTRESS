@@ -18,6 +18,15 @@ namespace fortress {
 // Forward declarations
 class Disassembler;
 
+// Disassembler interface for instruction decoding
+class Disassembler {
+public:
+    virtual ~Disassembler() = default;
+    virtual bool disassemble(const std::vector<uint8_t>& code, uint64_t base_address,
+                              std::vector<InstructionInfo>& instructions) const = 0;
+    virtual size_t get_max_instruction_size() const = 0;
+};
+
 // CFG Edge types
 enum class CFGEdgeType : uint8_t {
     Fallthrough = 0,      // Sequential execution (fallthrough)

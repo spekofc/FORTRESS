@@ -15,20 +15,9 @@
 #include <iomanip>
 #include <limits>
 #include <functional>
+#include <memory>
 
 namespace fortress {
-
-// ============================================================================
-// Disassembler Interface
-// ============================================================================
-
-class Disassembler {
-public:
-    virtual ~Disassembler() = default;
-    virtual bool disassemble(const std::vector<uint8_t>& code, uint64_t base_address,
-                              std::vector<InstructionInfo>& instructions) const = 0;
-    virtual size_t get_max_instruction_size() const = 0;
-};
 
 // Stub disassembler (for testing only - not for production use)
 class StubDisassembler : public Disassembler {
@@ -59,6 +48,27 @@ public:
     }
     
     size_t get_max_instruction_size() const override { return 15; }
+};
+
+// LLVM Disassembler wrapper that implements our Disassembler interface
+class LLVMDisassemblerWrapper : public Disassembler {
+public:
+    explicit LLVMDisassemblerWrapper(std::shared_ptr<LLVMDisassembler> disasm)
+        : disasm_(std::move(disasm)) {}
+    
+    bool disassemble(const std::vector<uint8_t>& code, uint64_t base_address,
+                      std::vector<InstructionInfo>& instructions) const override {
+        if (!disasm_) return false;
+        return disasm_->disassemble(code, base_address, instructions);
+    }
+    
+    size_t get_max_instruction_size() const override {
+        if (!disasm_) return 15;
+        return disasm_->get_max_instruction_size();
+    }
+    
+private:
+    std::shared_ptr<LLVMDisassembler> disasm_;
 };
 
 // ============================================================================
@@ -98,14 +108,17 @@ std::shared_ptr<Disassembler> CFGBuilder::create_disassembler(const BinaryAnalys
     );
     
     if (disasm->is_valid()) {
-        return disasm;
+        return std::make_shared<LLVMDisassemblerWrapper>(disasm);
     }
-#endif
     
-    (void)analysis; // Suppress unused parameter warning when LLVM is disabled
-    // Fallback to stub only if explicitly allowed (e.g., for testing)
-    // In production, we should fail if no real disassembler is available
-    return std::make_shared<StubDisassembler>();
+    // Return nullptr to indicate failure - caller must handle
+    return nullptr;
+#else
+    (void)analysis;
+    // LLVM disassembler disabled at compile time - return nullptr
+    // Caller must provide a disassembler via set_disassembler() for testing
+    return nullptr;
+#endif
 }
 
 CFGBuilderResult CFGBuilder::build_cfg(const FunctionInfo& function,
