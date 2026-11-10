@@ -63,10 +63,24 @@ namespace {
     }
     
     // Safe signed addition (for displacement calculation)
+    // Handles INT64_MIN correctly by avoiding negation overflow
     [[maybe_unused]] bool safe_add_signed(uint64_t base, int64_t disp, uint64_t& result) {
         if (disp >= 0) {
             return safe_add(base, static_cast<uint64_t>(disp), result);
         } else {
+            // For INT64_MIN, -INT64_MIN overflows int64_t.
+            // Use unsigned arithmetic: subtract (2^64 - |disp|) which is equivalent to adding negative disp
+            if (disp == std::numeric_limits<int64_t>::min()) {
+                // INT64_MIN = -0x8000000000000000
+                // base + INT64_MIN = base - 0x8000000000000000
+                // Since we're using uint64_t, this is base - 0x8000000000000000
+                // Check for underflow
+                if (base < 0x8000000000000000ull) {
+                    return false;
+                }
+                result = base - 0x8000000000000000ull;
+                return true;
+            }
             uint64_t abs_disp = static_cast<uint64_t>(-disp);
             return safe_sub(base, abs_disp, result);
         }
