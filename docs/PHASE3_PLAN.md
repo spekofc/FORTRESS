@@ -67,9 +67,9 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | CFGBuilderTest | 15 | ✅ 15/15 passing |
 | CallGraphBuilderTest | 24 | ✅ 24/24 passing |
 | LLVMDisassemblerTest | 24 | ✅ 24/24 passing |
-| **Total** | **186/186** | **186/186 passing** (100%) |
+| **Total** | **187/187** | **187/187 passing** (100%) |
 
-**186/186 tests passing in Debug configuration** (100% - all tests passing including LLVM MC Disassembler hardening).
+**187/187 tests passing in Debug configuration** (100% - all tests passing including LLVM MC Disassembler hardening).
 
 ### Files Added/Modified
 

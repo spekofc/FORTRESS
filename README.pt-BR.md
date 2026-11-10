@@ -181,8 +181,9 @@ fortress analyze -i exemplo.exe --imports
 - Binary Info: 3/3 passando
 - Analysis Data Model: 72/72 passando
 - CFG Builder: 15/15 passando
-- **Total: 138/138 testes passando**
-- Algoritmos não suportados (SHA-3, BLAKE2b, BLAKE3): retornam erro `UnsupportedOperation` explícito
+- Call Graph Builder: 24/24 passando
+- LLVM MC Disassembler: 25/25 passando
+- **Total: 187/187 testes passando**
 
 **Status do Build Release:**
 - Biblioteca e CLI compilam com sucesso
@@ -231,7 +232,7 @@ FORTRESS/
 | **Fase 2** | Binary Analyzer Core | ✅ Completa |
 | **Fase 3 — M1** | Analysis Data Model | ✅ Completa |
 | **Fase 3 — M2** | CFG Builder (Basic Blocks, Control Flow Graph) | ✅ Completa |
-| **Fase 3 — M3** | Call Graph (Direct/Indirect calls) | 📋 Planejado |
+| **Fase 3 — M3** | Call Graph (Direct/Indirect calls, imports, recursion) | ✅ Completa |
 | **Fase 3 — M4** | XREF Database (Cross-references) | 📋 Planejado |
 | **Fase 3 — M5** | Function Refiner (Confidence levels) | 📋 Planejado |
 | **Fase 3 — M6** | String Analysis | 📋 Planejado |

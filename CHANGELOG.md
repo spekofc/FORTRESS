@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional branch (JNE) with fallthrough and taken paths
 - **Phase 3 Milestone 2 (CFG Builder)** marked ✅ Complete
 - **Phase 3 Milestone 3 (Call Graph)** marked ✅ Complete
-- **Test Suite**: 186/186 tests passing in Debug
+- **Test Suite**: 187/187 tests passing in Debug
 
 - **CFG Builder** (Phase 3 Milestone 2):
   - Control Flow Graph construction for binary analysis

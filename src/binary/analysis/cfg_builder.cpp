@@ -344,10 +344,22 @@ std::vector<uint64_t> CFGBuilder::identify_leaders(const std::vector<Instruction
     for (size_t i = 0; i < instructions.size(); ++i) {
         auto cls = classify_instruction(instructions[i], function);
         
-        // Target of a branch is a leader
-        if (cls.is_conditional_branch || cls.is_unconditional_branch || cls.is_call) {
+        // Target of a branch is a leader (intraprocedural only)
+        if (cls.is_conditional_branch || cls.is_unconditional_branch) {
             if (cls.target_address.has_value()) {
-                leaders.push_back(cls.target_address.value());
+                uint64_t target = cls.target_address.value();
+                // Only add as leader if target is within function range
+                if (target >= function.address && target < function.address + function.size) {
+                    leaders.push_back(target);
+                }
+            }
+        }
+        
+        // For calls: the call target is interprocedural, not a leader in this CFG
+        // But the instruction AFTER the call is a leader (fallthrough)
+        if (cls.is_call) {
+            if (i + 1 < instructions.size()) {
+                leaders.push_back(instructions[i + 1].address);
             }
         }
         
@@ -377,15 +389,25 @@ std::vector<BasicBlock> CFGBuilder::build_basic_blocks(
     uint64_t /*code_base_address*/) {
     
     std::vector<BasicBlock> blocks;
-    blocks.reserve(leaders.size());
     
     // Sort leaders
     std::vector<uint64_t> sorted_leaders = leaders;
     std::sort(sorted_leaders.begin(), sorted_leaders.end());
     
+    uint64_t func_start = function.address;
+    uint64_t func_end = function.address + function.size;
+    
     for (size_t i = 0; i < sorted_leaders.size(); ++i) {
         uint64_t leader_addr = sorted_leaders[i];
-        uint64_t block_end = (i + 1 < sorted_leaders.size()) ? sorted_leaders[i + 1] : UINT64_MAX;
+        
+        // Skip leaders outside function range (interprocedural targets)
+        if (leader_addr < func_start || leader_addr >= func_end) {
+            continue;
+        }
+        
+        uint64_t block_end = (i + 1 < sorted_leaders.size()) ? sorted_leaders[i + 1] : func_end;
+        // Clamp block_end to function end
+        if (block_end > func_end) block_end = func_end;
         
         BasicBlock block;
         block.id = static_cast<uint32_t>(blocks.size());
@@ -411,11 +433,11 @@ std::vector<BasicBlock> CFGBuilder::build_basic_blocks(
             }
         }
         
-        block.size = (i + 1 < sorted_leaders.size()) ? 
-            (sorted_leaders[i + 1] - leader_addr) : 
-            (function.size > 0 ? function.size : 0);
+        block.size = block_end > leader_addr ? block_end - leader_addr : 0;
         
-        blocks.push_back(std::move(block));
+        if (!block.instructions.empty()) {
+            blocks.push_back(std::move(block));
+        }
     }
     
     return blocks;
@@ -478,9 +500,15 @@ void CFGBuilder::build_edges(ControlFlowGraph& cfg, const FunctionInfo& function
         }
         else if (cls.is_unconditional_branch) {
             if (cls.target_address.has_value()) {
-                // Direct jump
-                add_edge(cfg, block.id, cls.target_address.value(), 
-                        CFGEdgeType::UnconditionalBranch, true);
+                uint64_t target = cls.target_address.value();
+                // Check if target is within function range (intraprocedural)
+                if (target >= function.address && target < function.address + function.size) {
+                    // Direct jump (intraprocedural)
+                    add_edge(cfg, block.id, target, CFGEdgeType::UnconditionalBranch, true);
+                } else {
+                    // Interprocedural branch - treat as external call for CallGraphBuilder
+                    add_edge(cfg, block.id, target, CFGEdgeType::Call, true);
+                }
             } else {
                 // Indirect jump
                 block.successors.emplace_back(block.id, UINT32_MAX, CFGEdgeType::IndirectBranch, false);
@@ -489,13 +517,24 @@ void CFGBuilder::build_edges(ControlFlowGraph& cfg, const FunctionInfo& function
         }
         else if (cls.is_conditional_branch) {
             if (cls.target_address.has_value()) {
-                // Conditional branch - add both taken and fallthrough
-                add_edge(cfg, block.id, cls.target_address.value(), 
-                        CFGEdgeType::ConditionalBranch, true);
-                
-                // Fallthrough edge
-                if (block.id + 1 < cfg.blocks.size()) {
-                    add_edge(cfg, block.id, block.id + 1, CFGEdgeType::Fallthrough, true);
+                uint64_t target = cls.target_address.value();
+                // Check if target is within function range (intraprocedural)
+                if (target >= function.address && target < function.address + function.size) {
+                    // Conditional branch - add both taken and fallthrough
+                    add_edge(cfg, block.id, target, CFGEdgeType::ConditionalBranch, true);
+                    
+                    // Fallthrough edge
+                    if (block.id + 1 < cfg.blocks.size()) {
+                        add_edge(cfg, block.id, block.id + 1, CFGEdgeType::Fallthrough, true);
+                    }
+                } else {
+                    // Interprocedural branch - treat as external call
+                    add_edge(cfg, block.id, target, CFGEdgeType::Call, true);
+                    
+                    // Fallthrough edge
+                    if (block.id + 1 < cfg.blocks.size()) {
+                        add_edge(cfg, block.id, block.id + 1, CFGEdgeType::Fallthrough, true);
+                    }
                 }
             } else {
                 // Indirect conditional branch
@@ -505,7 +544,8 @@ void CFGBuilder::build_edges(ControlFlowGraph& cfg, const FunctionInfo& function
         }
         else if (cls.is_call) {
             if (cls.target_address.has_value()) {
-                // Direct call
+                // Direct call - add edge with target address for CallGraphBuilder
+                // This edge has target_address but may not have a valid target_block_id (interprocedural)
                 add_edge(cfg, block.id, cls.target_address.value(),
                         CFGEdgeType::Call, true);
             } else {
@@ -515,7 +555,7 @@ void CFGBuilder::build_edges(ControlFlowGraph& cfg, const FunctionInfo& function
                 block.has_call = true;
             }
             
-            // Fallthrough after call
+            // Fallthrough after call (intraprocedural)
             if (block.id + 1 < cfg.blocks.size()) {
                 add_edge(cfg, block.id, block.id + 1, CFGEdgeType::Fallthrough, true);
             }
@@ -539,16 +579,23 @@ void CFGBuilder::add_edge(ControlFlowGraph& cfg, uint32_t src_id, uint64_t targe
         }
     }
     
-    cfg.blocks[src_id].successors.emplace_back(src_id, dst_id, type, resolved);
+    // Always preserve the target address for interprocedural calls
+    CFGEdge edge(src_id, dst_id, type, resolved);
+    edge.target_address = target_addr;
+    cfg.blocks[src_id].successors.emplace_back(std::move(edge));
     if (dst_id != UINT32_MAX) {
         cfg.blocks[dst_id].predecessors.push_back(src_id);
     }
 }
 
 void CFGBuilder::add_edge(ControlFlowGraph& cfg, uint32_t src_id, uint32_t dst_id,
-                          CFGEdgeType type, bool /*resolved*/,
-                          std::optional<uint64_t> /*target_addr*/) {
-    cfg.blocks[src_id].successors.emplace_back(src_id, dst_id, type, true);
+                          CFGEdgeType type, bool resolved,
+                          std::optional<uint64_t> target_addr) {
+    CFGEdge edge(src_id, dst_id, type, resolved);
+    if (target_addr.has_value()) {
+        edge.target_address = target_addr.value();
+    }
+    cfg.blocks[src_id].successors.emplace_back(std::move(edge));
     if (dst_id != UINT32_MAX) {
         cfg.blocks[dst_id].predecessors.push_back(src_id);
     }
