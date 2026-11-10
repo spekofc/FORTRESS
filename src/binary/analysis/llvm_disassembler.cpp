@@ -469,10 +469,25 @@ struct LLVMDisassembler::Internal {
             
             if (!info.is_indirect && instr_analysis_) {
                 uint64_t target = 0;
-                // Try to evaluate the branch target
+                // Try to evaluate the branch target (works for branches, not CALL)
                 if (instr_analysis_->evaluateBranch(inst, info.address, size, target)) {
                     info.target_address = target;
                     has_target = true;
+                } else if (is_call) {
+                    // For CALL instructions, evaluateBranch doesn't work.
+                    // Parse the displacement from MCInst operands directly.
+                    // CALL rel32 has one operand: the 32-bit displacement (immediate)
+                    for (unsigned i = 0; i < inst.getNumOperands(); ++i) {
+                        const llvm::MCOperand& op = inst.getOperand(i);
+                        if (op.isImm()) {
+                            int64_t disp = op.getImm();
+                            // Target = address + size + sign_extended_displacement
+                            uint64_t call_target = info.address + size + static_cast<int64_t>(disp);
+                            info.target_address = call_target;
+                            has_target = true;
+                            break;
+                        }
+                    }
                 }
             }
             
