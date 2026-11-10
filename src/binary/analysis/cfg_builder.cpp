@@ -206,12 +206,10 @@ CFGBuilderResult CFGBuilder::build_cfg_internal(const FunctionInfo& function,
         cfg->is_valid = true;
     }
     
-    // Update metadata
-    cfg->blocks = std::move(ctx.blocks);
-    cfg->address_to_block = std::move(ctx.address_to_block);
-    cfg->offset_to_block = std::move(ctx.offset_to_block);
-    
-    // Rebuild address/offset maps
+    // Update metadata (build_cfg_structure already moved blocks and built address maps)
+    // Just rebuild address/offset maps to include all instructions
+    cfg->address_to_block.clear();
+    cfg->offset_to_block.clear();
     for (size_t i = 0; i < cfg->blocks.size(); ++i) {
         const auto& block = cfg->blocks[i];
         cfg->address_to_block[block.start_address] = block.id;

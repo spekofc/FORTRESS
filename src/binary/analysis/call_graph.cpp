@@ -562,7 +562,11 @@ CallGraphResult CallGraphBuilder::build_call_graph(const BinaryAnalysisResult& a
     
     bool success = build_call_graph_internal(analysis, cfgs, ctx, *graph);
     if (success) {
-        return CallGraphResult(std::move(graph));
+        CallGraphResult result(std::move(graph));
+        result.resolutions_performed = resolutions_.size();
+        result.nodes_created = result.graph->nodes.size();
+        result.edges_created = result.graph->edges.size();
+        return result;
     } else {
         return CallGraphResult("Call graph construction failed");
     }

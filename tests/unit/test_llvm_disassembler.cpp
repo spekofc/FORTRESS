@@ -481,7 +481,7 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     main_func.architecture = Architecture::X64;
     main_func.confidence = ConfidenceLevel::High;
     main_func.source = FunctionSource::EntryPoint;
-    main_func.call_targets = {0x2000};
+    main_func.call_targets = {};  // Don't pre-fill - let the CFG discover it
     analysis.functions.push_back(main_func);
     
     FunctionInfo func_a;

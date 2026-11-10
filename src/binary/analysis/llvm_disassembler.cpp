@@ -492,12 +492,12 @@ struct LLVMDisassembler::Internal {
             }
             
             // Fallback to operand parsing if MCInstrAnalysis couldn't determine target
+            // Only use operand parsing for absolute targets (not relative displacements)
+            // For relative calls/jumps, LLVM AT&T syntax prints the displacement, not the target
+            // We already handled relative calls/jumps above via MCInst operand parsing
             if (!has_target && !info.is_indirect) {
-                // For relative calls/jumps, LLVM AT&T syntax prints the displacement
-                // For direct absolute calls/jumps, LLVM prints the target address
-                // Parse the operands to determine the target
-                
-                // Check for hex with 0x/0X prefix
+                // Check if operands contain an absolute address (hex with 0x prefix)
+                // This handles cases like "call 0x401000" or "jmp 0x401000"
                 size_t hex_start = info.operands.find("0x");
                 if (hex_start == std::string::npos) {
                     hex_start = info.operands.find("0X");
@@ -508,45 +508,14 @@ struct LLVMDisassembler::Internal {
                     try {
                         uint64_t target_addr = std::stoull(info.operands.substr(hex_start), nullptr, 16);
                         info.target_address = target_addr;
+                        has_target = true;
                     } catch (...) {
                         // Ignore parse errors
                     }
-                } else {
-                    // If no hex with prefix, check for hex without prefix (all hex digits)
-                    std::string operands_copy = info.operands;
-                    bool all_hex = true;
-                    if (!operands_copy.empty() && operands_copy[0] == '-') {
-                        // Negative hex value - check rest
-                    }
-                    for (size_t i = 0; i < operands_copy.size(); ++i) {
-                        char c = operands_copy[i];
-                        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
-                            all_hex = false;
-                            break;
-                        }
-                    }
-                    if (all_hex && !operands_copy.empty() && operands_copy != "-") {
-                        try {
-                            uint64_t target_addr = std::stoull(info.operands, nullptr, 16);
-                            info.target_address = target_addr;
-                        } catch (...) {
-                            // Ignore parse errors
-                        }
-                    }
-                    
-                    // If no hex, check for decimal address
-                    size_t digit_start = info.operands.find_first_of("0123456789");
-                    if (digit_start != std::string::npos) {
-                        size_t digit_end = info.operands.find_first_not_of("0123456789", digit_start);
-                        std::string dec_str = info.operands.substr(digit_start, digit_end - digit_start);
-                        try {
-                            uint64_t target_addr = std::stoull(info.operands.substr(digit_start, digit_end - digit_start), nullptr, 10);
-                            info.target_address = target_addr;
-                        } catch (...) {
-                            // Ignore parse errors
-                        }
-                    }
                 }
+                // Note: We do NOT parse decimal numbers as absolute addresses
+                // because LLVM prints relative displacements in decimal for CALL/JMP
+                // e.g., "call 4090" means displacement 4090, not target address 4090
             }
             
             info.format = "at&t";  // LLVM outputs AT&T syntax

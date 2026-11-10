@@ -326,11 +326,13 @@ TEST_F(CFGBuilderTest, Statistics) {
     EXPECT_TRUE(result.success);
     
     // Statistics should be populated if blocks exist
+    // Note: A linear function with only NOPs has 1 block, 0 edges, 0 successors
+    // This is correct behavior - only functions with branches/returns have edges
     if (!result.cfg->blocks.empty()) {
         EXPECT_GT(result.cfg->total_instructions, 0);
-        EXPECT_GT(result.cfg->total_edges, 0);
+        EXPECT_EQ(result.cfg->total_edges, 0);  // Linear function has no edges
         EXPECT_GT(result.cfg->max_block_size, 0);
-        EXPECT_GT(result.cfg->max_successors, 0);
+        EXPECT_EQ(result.cfg->max_successors, 0);  // Linear function has no branches
     }
 }
 
