@@ -4,6 +4,7 @@
 #include <fortress/binary/analysis/cfg_builder.h>
 #include <fortress/binary/analysis/binary_info.h>
 #include <fortress/binary/analysis/analysis_model.h>
+#include <fortress/binary/analysis/llvm_disassembler.h>
 #include <fortress/core/types.h>
 #include <algorithm>
 #include <queue>
@@ -18,7 +19,7 @@
 namespace fortress {
 
 // ============================================================================
-// Disassembler Interface (minimal for now, will use LLVM MC later)
+// Disassembler Interface
 // ============================================================================
 
 class Disassembler {
@@ -29,7 +30,7 @@ public:
     virtual size_t get_max_instruction_size() const = 0;
 };
 
-// Stub disassembler (placeholder for LLVM MC integration)
+// Stub disassembler (for testing only - not for production use)
 class StubDisassembler : public Disassembler {
 public:
     bool disassemble(const std::vector<uint8_t>& code, uint64_t base_address,
@@ -79,12 +80,32 @@ struct CFGBuilder::BuildContext {
 };
 
 CFGBuilder::CFGBuilder(const CFGBuilderConfig& config)
-    : config_(config), disassembler_(std::make_shared<StubDisassembler>()) {}
+    : config_(config), disassembler_(nullptr) {}
 
 CFGBuilder::~CFGBuilder() = default;
 
 void CFGBuilder::set_disassembler(std::shared_ptr<Disassembler> disassembler) {
     disassembler_ = std::move(disassembler);
+}
+
+std::shared_ptr<Disassembler> CFGBuilder::create_disassembler(const BinaryAnalysisResult& analysis) {
+#if defined(FORTRESS_USE_LLVM_DISASSEMBLER) && FORTRESS_USE_LLVM_DISASSEMBLER
+    // Create LLVM MC disassembler based on binary architecture
+    auto disasm = std::make_shared<LLVMDisassembler>(
+        analysis.architecture,
+        analysis.endianness,
+        analysis.is_64bit
+    );
+    
+    if (disasm->is_valid()) {
+        return disasm;
+    }
+#endif
+    
+    (void)analysis; // Suppress unused parameter warning when LLVM is disabled
+    // Fallback to stub only if explicitly allowed (e.g., for testing)
+    // In production, we should fail if no real disassembler is available
+    return std::make_shared<StubDisassembler>();
 }
 
 CFGBuilderResult CFGBuilder::build_cfg(const FunctionInfo& function,
@@ -210,6 +231,14 @@ CFGBuilderResult CFGBuilder::build_cfg_internal(const FunctionInfo& function,
 
 bool CFGBuilder::disassemble_function(BuildContext& ctx) {
     const auto& function = *ctx.function;
+    
+    // Ensure we have a disassembler
+    if (!disassembler_) {
+        disassembler_ = create_disassembler(*ctx.analysis);
+        if (!disassembler_) {
+            return false;
+        }
+    }
     
     // Find the section containing the function (manual VA range check)
     const SectionInfo* section = nullptr;

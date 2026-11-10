@@ -5,6 +5,7 @@ add_library(fortress_binary STATIC
     analysis/analysis_model.cpp
     analysis/cfg_builder.cpp
     analysis/call_graph.cpp
+    analysis/llvm_disassembler.cpp
     formats/pe/pe_parser.cpp
     formats/elf/elf_parser.cpp
     formats/macho/macho_parser.cpp

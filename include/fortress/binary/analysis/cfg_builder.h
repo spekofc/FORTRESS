@@ -235,6 +235,9 @@ public:
     // Set custom disassembler (optional)
     void set_disassembler(std::shared_ptr<Disassembler> disassembler);
     
+    // Create disassembler for the given architecture (public for testing)
+    static std::shared_ptr<Disassembler> create_disassembler(const BinaryAnalysisResult& analysis);
+    
     // Get configuration
     const CFGBuilderConfig& get_config() const { return config_; }
     void set_config(const CFGBuilderConfig& config) { config_ = config; }
