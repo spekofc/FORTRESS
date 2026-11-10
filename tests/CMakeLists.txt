@@ -30,6 +30,7 @@ add_executable(fortress_tests
     unit/test_analysis_model.cpp
     unit/test_cfg.cpp
     unit/test_call_graph.cpp
+    unit/test_llvm_disassembler.cpp
 )
 
 target_link_libraries(fortress_tests PRIVATE
@@ -37,6 +38,11 @@ target_link_libraries(fortress_tests PRIVATE
     fortress_binary
     gtest_main
     nlohmann_json::nlohmann_json
+)
+
+# Propagate LLVM disassembler option to tests
+target_compile_definitions(fortress_tests PRIVATE
+    FORTRESS_USE_LLVM_DISASSEMBLER=$<BOOL:${FORTRESS_USE_LLVM_DISASSEMBLER}>
 )
 
 # Add tests

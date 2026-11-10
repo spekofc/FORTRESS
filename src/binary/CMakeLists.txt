@@ -21,6 +21,12 @@ target_link_libraries(fortress_binary PUBLIC
     LLVMMCParser
     LLVMMCDisassembler
     LLVMTargetParser
+    LLVMX86CodeGen
+    LLVMX86Disassembler
+    LLVMX86AsmParser
+    LLVMX86Desc
+    LLVMX86Info
+    LLVMX86TargetMCA
 )
 
 # Propagate FORTRESS_USE_LLVM_DISASSEMBLER option to C++ as a compile definition
@@ -28,10 +34,8 @@ target_compile_definitions(fortress_binary PUBLIC
     FORTRESS_USE_LLVM_DISASSEMBLER=$<BOOL:${FORTRESS_USE_LLVM_DISASSEMBLER}>
 )
 
-# Add LLVM include directory directly to compile flags for this target
-target_compile_options(fortress_binary PUBLIC
-    -IC:/msys64/ucrt64/include
-)
+# Propagate LLVM include directories through target_link_libraries
+# The LLVM targets provide INTERFACE_INCLUDE_DIRECTORIES automatically
 
 target_include_directories(fortress_binary PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>

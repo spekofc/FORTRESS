@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <mutex>
+#include <iostream>
 
 #if defined(FORTRESS_USE_LLVM_DISASSEMBLER) && FORTRESS_USE_LLVM_DISASSEMBLER
 #include <llvm/MC/MCContext.h>
@@ -19,6 +20,7 @@
 #include <llvm/MC/MCInstrInfo.h>
 #include <llvm/MC/MCRegisterInfo.h>
 #include <llvm/MC/MCSubtargetInfo.h>
+#include <llvm/MC/MCAsmInfo.h>
 #include <llvm/MC/MCTargetOptions.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -58,13 +60,13 @@ struct LLVMDisassembler::Internal {
     Internal(Architecture arch, Endianness endianness, bool is_64bit)
         : arch_(arch), endianness_(endianness), is_64bit_(is_64bit) {
         
-        // Thread-safe one-time LLVM target initialization
+        // Thread-safe one-time LLVM target initialization - initialize native target
         static std::once_flag init_flag;
         std::call_once(init_flag, []() {
-            llvm::InitializeAllTargetInfos();
-            llvm::InitializeAllTargets();
-            llvm::InitializeAllTargetMCs();
-            llvm::InitializeAllDisassemblers();
+            llvm::InitializeNativeTarget();
+            llvm::InitializeNativeTargetAsmPrinter();
+            llvm::InitializeNativeTargetAsmParser();
+            llvm::InitializeNativeTargetDisassembler();
         });
 
         if (!validate_architecture_config()) {
@@ -125,11 +127,9 @@ struct LLVMDisassembler::Internal {
             return;
         }
 
-        // Create instruction printer
+        // Create instruction printer - use integer syntax variant (0 = Intel, 1 = AT&T)
         printer_ = std::unique_ptr<llvm::MCInstPrinter>(target_->createMCInstPrinter(
-            llvm_triple,
-            llvm::MCInstPrinter::Syntax::Intel,
-            *mai_, *mii_, *mri_));
+            llvm_triple, 0, *mai_, *mii_, *mri_));
         if (!printer_) {
             status_ = Status::InitializationFailed;
             return;
@@ -182,7 +182,7 @@ struct LLVMDisassembler::Internal {
     }
 
     std::string get_triple() const {
-        // Use format-appropriate triples
+        // Use format-appropriate triples for cross-platform binary analysis
         switch (arch_) {
             case Architecture::X64:
                 return "x86_64-pc-windows-msvc";
@@ -241,7 +241,7 @@ struct LLVMDisassembler::Internal {
                 invalid_instr.is_conditional_jump = false;
                 invalid_instr.is_return = false;
                 invalid_instr.is_indirect = false;
-                invalid_instr.format = "intel";
+                invalid_instr.format = "at&t";
                 instructions.push_back(std::move(invalid_instr));
                 offset += 1;
                 continue;
@@ -257,20 +257,148 @@ struct LLVMDisassembler::Internal {
             // Get mnemonic and operands
             std::string asm_string;
             llvm::raw_string_ostream os(asm_string);
-            printer_->printInst(&inst, os, "", *sti_);
+            // LLVM 18+ printInst signature: printInst(const MCInst*, uint64_t, StringRef, const MCSubtargetInfo&, raw_ostream&)
+            printer_->printInst(&inst, base_address + offset, "", *sti_, os);
             os.flush();
 
-            // Parse the output: "mnemonic operands"
-            size_t space_pos = asm_string.find(' ');
+            // Parse the output: "mnemonic operands" - LLVM outputs AT&T syntax with tabs
+            // Example: "\tcallq\t0x401000" or "\tretq" or "\tjmp\t0x401000"
+            
+            // Trim leading whitespace/tabs
+            size_t first_non_ws = asm_string.find_first_not_of(" \t");
+            if (first_non_ws != std::string::npos) {
+                asm_string = asm_string.substr(first_non_ws);
+            }
+            
+            // Parse the output: "mnemonic operands" - split on whitespace (space or tab)
+            size_t space_pos = asm_string.find_first_of(" \t");
             if (space_pos != std::string::npos) {
                 info.mnemonic = asm_string.substr(0, space_pos);
-                info.operands = asm_string.substr(space_pos + 1);
+                // Skip all whitespace to get operands
+                size_t operand_start = asm_string.find_first_not_of(" \t", space_pos);
+                if (operand_start != std::string::npos) {
+                    info.operands = asm_string.substr(operand_start);
+                } else {
+                    info.operands = "";
+                }
             } else {
                 info.mnemonic = asm_string;
                 info.operands = "";
             }
-            info.format = "intel";
-
+            
+            // Clean mnemonic: remove suffixes like 'q', 'l', 'w', 'b' for x86-64
+            // e.g., "callq" -> "call", "retq" -> "ret", "jmpq" -> "jmp"
+            std::string clean_mnemonic = info.mnemonic;
+            if (!clean_mnemonic.empty()) {
+                char last_char = clean_mnemonic.back();
+                if ((last_char == 'q' || last_char == 'l' || last_char == 'w' || last_char == 'b') && clean_mnemonic.length() > 1) {
+                    clean_mnemonic.pop_back();
+                }
+            }
+            info.mnemonic = clean_mnemonic;
+            info.format = "at&t";  // LLVM outputs AT&T syntax
+            
+            // Parse target address for direct calls and jumps
+            // For relative calls/jumps, calculate: target = instruction_address + instruction_size + sign_extended_immediate
+            // Operands format: "0x401000" or "0" or "2" or "2147479547" or "*%rax" or "(%rax)" or "0x401000(%rip)"
+            std::string operands_lower = info.operands;
+            std::transform(operands_lower.begin(), operands_lower.end(), operands_lower.begin(), ::tolower);
+            
+            // Check for indirect calls/jumps (register or memory indirect)
+            if (operands_lower.find('*') != std::string::npos || 
+                operands_lower.find('(') != std::string::npos ||
+                operands_lower.find('%') != std::string::npos) {
+                info.is_indirect = true;
+            }
+            
+            // Parse immediate value from operands (for relative calls/jumps)
+            int64_t immediate = 0;
+            bool has_immediate = false;
+            
+            // Check for hex address (0x...)
+            size_t hex_start = info.operands.find("0x");
+            if (hex_start == std::string::npos) {
+                hex_start = info.operands.find("0X");
+            }
+            if (hex_start != std::string::npos) {
+                size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
+                std::string hex_str = info.operands.substr(hex_start, hex_end - hex_start);
+                try {
+                    int64_t imm = std::stoll(info.operands.substr(hex_start), nullptr, 16);
+                    immediate = imm;
+                    has_immediate = true;
+                } catch (...) {
+                    // Ignore parse errors
+                }
+            }
+            
+            // If no hex address found, check for decimal address (sequence of digits)
+            if (!has_immediate) {
+                // Look for decimal number in operands (including negative)
+                std::string operands_copy = info.operands;
+                // Remove any leading non-digit characters (except minus)
+                size_t digit_start = operands_copy.find_first_of("0123456789-");
+                if (digit_start != std::string::npos) {
+                    // Check if it's a minus sign followed by digits
+                    size_t digit_end = digit_start;
+                    if (operands_copy[digit_start] == '-') {
+                        digit_end = digit_start + 1;
+                    } else {
+                        digit_end = digit_start;
+                    }
+                    digit_end = operands_copy.find_first_not_of("0123456789", digit_end);
+                    std::string dec_str = operands_copy.substr(digit_start, digit_end - digit_start);
+                    try {
+                        int64_t imm = std::stoll(dec_str, nullptr, 10);
+                        immediate = imm;
+                        has_immediate = true;
+                    } catch (...) {
+                        // Ignore parse errors
+                    }
+                }
+            }
+            
+            // For relative calls/jumps (not indirect), calculate absolute target address
+            // target = instruction_address + instruction_size + sign_extended_immediate
+            if (has_immediate && !info.is_indirect) {
+                uint64_t instr_addr = base_address + offset;
+                int64_t target = static_cast<int64_t>(instr_addr) + static_cast<int64_t>(size) + immediate;
+                info.target_address = static_cast<uint64_t>(target);
+            } else if (!info.is_indirect) {
+                // For direct absolute calls/jumps, try to parse absolute address
+                // Check for hex address (0x...)
+                size_t abs_hex_start = info.operands.find("0x");
+                if (abs_hex_start == std::string::npos) {
+                    abs_hex_start = info.operands.find("0X");
+                }
+                if (abs_hex_start != std::string::npos) {
+                    size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
+                    std::string hex_str = info.operands.substr(hex_start, hex_end - hex_start);
+                    try {
+                        uint64_t target_addr = std::stoull(info.operands.substr(hex_start), nullptr, 16);
+                        info.target_address = target_addr;
+                    } catch (...) {
+                        // Ignore parse errors
+                    }
+                } else {
+                    // If no hex address found, check for decimal address (sequence of digits)
+                    std::string operands_copy = info.operands;
+                    size_t digit_start = operands_copy.find_first_of("0123456789");
+                    if (digit_start != std::string::npos) {
+                        size_t digit_end = operands_copy.find_first_not_of("0123456789", digit_start);
+                        std::string dec_str = operands_copy.substr(digit_start, digit_end - digit_start);
+                        try {
+                            uint64_t target_addr = std::stoull(dec_str, nullptr, 10);
+                            info.target_address = target_addr;
+                        } catch (...) {
+                            // Ignore parse errors
+                        }
+                    }
+                }
+            }
+            
+            info.format = "at&t";  // LLVM outputs AT&T syntax
+            
             // Basic classification based on mnemonic (simplified without MCInstrAnalysis)
             std::string mnemonic_lower = info.mnemonic;
             std::transform(mnemonic_lower.begin(), mnemonic_lower.end(), mnemonic_lower.begin(), ::tolower);
@@ -291,7 +419,12 @@ struct LLVMDisassembler::Internal {
                 info.is_conditional_jump = true;
                 info.is_jump = true;
             }
-
+            
+            // Indirect call detection
+            if (info.is_call && info.is_indirect) {
+                info.is_indirect = true;
+            }
+            
             instructions.push_back(std::move(info));
             offset += size;
         }

@@ -25,7 +25,7 @@ option(FORTRESS_BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(FORTRESS_BUILD_TESTS "Build tests" ON)
 option(FORTRESS_BUILD_CLI "Build CLI tool" ON)
 option(FORTRESS_ENABLE_SANITIZERS "Enable sanitizers (Debug only)" OFF)
-option(FORTRESS_USE_LLVM_DISASSEMBLER "Use LLVM MC disassembler" OFF)
+option(FORTRESS_USE_LLVM_DISASSEMBLER "Use LLVM MC disassembler" ON)
 
 # Sanitizers for Debug builds
 if(FORTRESS_ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -60,8 +60,17 @@ set(LLVM_COMPONENTS
     TargetParser
 )
 
-# Add LLVM include directories explicitly since LLVM_INCLUDE_DIRS may not be set in CONFIG mode
-include_directories(${LLVM_INCLUDE_DIRS} "C:/msys64/ucrt64/include")
+# Add LLVM include directories from find_package
+include_directories(${LLVM_INCLUDE_DIRS})
+
+# Don't use LLVM_DEFINITIONS - it causes issues with multiple definitions in a single string
+# The LLVM targets will handle their own compile definitions via target_link_libraries
+
+# Set CMake module path for LLVM
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+
+# Use LLVM's AddLLVM.cmake for consistent settings
+include(AddLLVM)
 
 # Fortress version configuration
 configure_file(
