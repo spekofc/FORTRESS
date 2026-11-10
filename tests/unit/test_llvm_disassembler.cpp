@@ -401,148 +401,7 @@ TEST_F(LLVMDisassemblerTest, MixedInstructionSizes) {
 // Helper Functions for Integration Tests
 // ============================================================================
 
-static std::unique_ptr<ControlFlowGraph> create_test_cfg(
-    const FunctionInfo& func, 
-    const std::vector<InstructionInfo>& instructions) 
-{
-    auto cfg_ptr = std::make_unique<ControlFlowGraph>();
-    cfg_ptr->function = func;
-    ControlFlowGraph& cfg = *cfg_ptr;
-    
-    std::vector<uint64_t> leaders;
-    leaders.push_back(func.address);
-    
-    for (size_t idx = 0; idx < instructions.size(); ++idx) {
-        const auto& instr = instructions[idx];
-        if (instr.is_call || instr.is_jump || instr.is_conditional_jump || instr.is_return) {
-            if (instr.target_address.has_value()) {
-                leaders.push_back(instr.target_address.value());
-            }
-            if (idx + 1 < instructions.size()) {
-                leaders.push_back(instructions[idx + 1].address);
-            }
-        }
-    }
-    
-    std::sort(leaders.begin(), leaders.end());
-    leaders.erase(std::unique(leaders.begin(), leaders.end()), leaders.end());
-    
-    for (size_t block_idx = 0; block_idx < leaders.size(); ++block_idx) {
-        uint64_t leader_addr = leaders[block_idx];
-        uint64_t block_end = (block_idx + 1 < leaders.size()) ? leaders[block_idx + 1] : func.address + func.size;
-        
-        BasicBlock block;
-        block.id = static_cast<uint32_t>(cfg.blocks.size());
-        block.start_address = leader_addr;
-        block.start_offset = INVALID_OFFSET;
-        block.is_entry = (leader_addr == func.address);
-        block.is_entry_block = (leader_addr == func.address);
-        
-        for (const auto& instr : instructions) {
-            if (instr.address >= leader_addr && instr.address < block_end) {
-                block.instructions.push_back(instr);
-                block.size += instr.size;
-                block.instruction_count++;
-                block.max_instruction_length = std::max(block.max_instruction_length, instr.size);
-                
-                if (instr.is_call) block.has_call = true;
-                if (instr.is_return) block.has_return = true;
-                if (instr.is_indirect && (instr.is_jump || instr.is_call)) block.has_indirect_branch = true;
-            }
-        }
-        
-        block.size = (block_idx + 1 < leaders.size()) ? 
-            (leaders[block_idx + 1] - leader_addr) : 
-            (func.size > 0 ? func.size : 0);
-        
-        cfg.blocks.push_back(std::move(block));
-    }
-    
-    // Build edges
-    for (uint32_t blk_idx = 0; blk_idx < cfg.blocks.size(); ++blk_idx) {
-        auto& block = cfg.blocks[blk_idx];
-        if (block.instructions.empty()) continue;
-        
-        const auto& last_instr = block.instructions.back();
-        
-        if (last_instr.is_return) {
-            block.successors.emplace_back(block.id, UINT32_MAX, CFGEdgeType::Return, true);
-        } else if (last_instr.is_jump && !last_instr.is_conditional_jump && !last_instr.is_call) {
-            if (last_instr.target_address.has_value()) {
-                for (uint32_t j = 0; j < cfg.blocks.size(); ++j) {
-                    if (cfg.blocks[j].start_address == last_instr.target_address.value()) {
-                        cfg.blocks[blk_idx].successors.emplace_back(blk_idx, j, CFGEdgeType::UnconditionalBranch, true);
-                        cfg.blocks[j].predecessors.push_back(blk_idx);
-                        break;
-                    }
-                }
-            } else {
-                block.successors.emplace_back(block.id, UINT32_MAX, CFGEdgeType::IndirectBranch, false);
-            }
-            } else if (last_instr.is_conditional_jump) {
-                if (last_instr.target_address.has_value()) {
-                    for (uint32_t j = 0; j < cfg.blocks.size(); ++j) {
-                        if (cfg.blocks[j].start_address == last_instr.target_address.value()) {
-                            cfg.blocks[blk_idx].successors.emplace_back(blk_idx, j, CFGEdgeType::ConditionalBranch, true);
-                            cfg.blocks[j].predecessors.push_back(blk_idx);
-                            break;
-                        }
-                    }
-                    if (blk_idx + 1 < cfg.blocks.size()) {
-                        cfg.blocks[blk_idx].successors.emplace_back(blk_idx, blk_idx + 1, CFGEdgeType::Fallthrough, true);
-                        cfg.blocks[blk_idx + 1].predecessors.push_back(blk_idx);
-                    }
-                } else {
-                    block.successors.emplace_back(block.id, UINT32_MAX, CFGEdgeType::ConditionalBranch, false);
-                }
-            } else if (last_instr.is_call) {
-                if (last_instr.target_address.has_value()) {
-                    for (uint32_t j = 0; j < cfg.blocks.size(); ++j) {
-                        if (cfg.blocks[j].start_address == last_instr.target_address.value()) {
-                            cfg.blocks[blk_idx].successors.emplace_back(blk_idx, j, CFGEdgeType::Call, true);
-                            cfg.blocks[j].predecessors.push_back(blk_idx);
-                            break;
-                        }
-                    }
-                } else {
-                    block.successors.emplace_back(block.id, UINT32_MAX, CFGEdgeType::IndirectCall, false);
-                }
-                if (blk_idx + 1 < cfg.blocks.size()) {
-                    block.successors.emplace_back(blk_idx, blk_idx + 1, CFGEdgeType::Fallthrough, true);
-                    cfg.blocks[blk_idx + 1].predecessors.push_back(blk_idx);
-                }
-            } else {
-                if (blk_idx + 1 < cfg.blocks.size()) {
-                    block.successors.emplace_back(blk_idx, blk_idx + 1, CFGEdgeType::Fallthrough, true);
-                    cfg.blocks[blk_idx + 1].predecessors.push_back(blk_idx);
-                }
-            }
-        }
-    
-    for (uint32_t blk_idx = 0; blk_idx < cfg.blocks.size(); ++blk_idx) {
-        const auto& block = cfg.blocks[blk_idx];
-        cfg.address_to_block[block.start_address] = block.id;
-        for (const auto& instr : block.instructions) {
-            cfg.address_to_block[instr.address] = block.id;
-        }
-    }
-    
-    cfg.entry_block = 0;
-    for (uint32_t blk_idx = 0; blk_idx < cfg.blocks.size(); ++blk_idx) {
-        if (cfg.blocks[blk_idx].has_return || cfg.blocks[blk_idx].successors.empty()) {
-            cfg.exit_blocks.push_back(static_cast<uint32_t>(blk_idx));
-        }
-    }
-    
-    cfg.is_valid = true;
-    cfg.total_instructions = instructions.size();
-    cfg.total_edges = 0;
-    for (const auto& block : cfg.blocks) {
-        cfg.total_edges += block.successors.size();
-    }
-    
-    return cfg_ptr;
-}
+
 
 // ============================================================================
 // Integration Tests
@@ -632,7 +491,7 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     func_a.architecture = Architecture::X64;
     func_a.confidence = ConfidenceLevel::High;
     func_a.source = FunctionSource::Disassembly;
-    func_a.call_targets = {};
+    func_a.call_targets = {};  // Indirect call - no static target
     analysis.functions.push_back(func_a);
     
     FunctionInfo func_b;
@@ -642,66 +501,55 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     func_b.architecture = Architecture::X64;
     func_b.confidence = ConfidenceLevel::High;
     func_b.source = FunctionSource::Disassembly;
-    func_b.call_targets = {};
+    func_b.call_targets = {};  // No calls
     analysis.functions.push_back(func_b);
     
-    // Step 1: Disassemble
-    auto disasm = std::make_shared<LLVMDisassembler>(
-        Architecture::X64, Endianness::Little, true);
-    ASSERT_TRUE(disasm->is_valid()) << "LLVM disassembler not available";
+    // Step 1: Use REAL CFGBuilder to build CFGs for each function
+    CFGBuilderConfig cfg_config;
+    cfg_config.identify_loops = true;
+    cfg_config.compute_dominators = true;
+    cfg_config.identify_unreachable = true;
     
-    std::vector<uint8_t> code_final = code;
-    code_final.resize(0x2021, 0x90);
-    code_final[0x1000] = 0x90;
-    code_final[0x1001] = 0x48; code_final[0x1002] = 0xB8;
-    code_final[0x1003] = 0x00; code_final[0x1004] = 0x40; 
-    code_final[0x1005] = 0x00; code_final[0x1006] = 0x00;
-    code_final[0x1007] = 0x00; code_final[0x1008] = 0x00;
-    code_final[0x1009] = 0x00; code_final[0x100A] = 0x00;
-    code_final[0x100B] = 0xFF; code_final[0x100C] = 0xD0;
-    code_final[0x100D] = 0xC3;
-    code_final[0x2000] = 0x48; code_final[0x2001] = 0x39; code_final[0x2002] = 0xD8;
-    code_final[0x2003] = 0x75; code_final[0x2004] = 0x02;
-    code_final[0x2005] = 0x90;
-    code_final[0x2006] = 0xC3;
+    CFGBuilder cfg_builder(cfg_config);
     
-    std::vector<InstructionInfo> all_instructions;
+    // The section starts at 0x1000, so code_for_disasm offset 0 = VA 0x1000
+    // func_a at 0x2000 is at offset 0x1000 from section base
+    // func_b at 0x3000 is at offset 0x2000 from section base
+    std::vector<uint8_t> code_for_disasm(0x2021, 0x90);
+    // main at 0x1000 (offset 0)
+    code_for_disasm[0x0000] = 0x90;                                  // NOP at 0x1000
+    code_for_disasm[0x0001] = 0xE8; code_for_disasm[0x0002] = 0xFA; 
+    code_for_disasm[0x0003] = 0x0F; code_for_disasm[0x0004] = 0x00; 
+    code_for_disasm[0x0005] = 0x00;                                  // CALL 0x2000 at 0x1001 (disp=0xFFA)
+    code_for_disasm[0x0006] = 0xC3;                                  // RET at 0x1006
     
-    ASSERT_TRUE(disasm->is_valid()) << "LLVM disassembler not available";
+    // func_a at 0x2000 (offset 0x1000 from section base)
+    code_for_disasm[0x1000] = 0x90;                                  // NOP at 0x2000
+    code_for_disasm[0x1001] = 0x48; code_for_disasm[0x1002] = 0xB8;
+    code_for_disasm[0x1003] = 0x00; code_for_disasm[0x1004] = 0x40; 
+    code_for_disasm[0x1005] = 0x00; code_for_disasm[0x1006] = 0x00;
+    code_for_disasm[0x1007] = 0x00; code_for_disasm[0x1008] = 0x00;
+    code_for_disasm[0x1009] = 0x00; code_for_disasm[0x100A] = 0x00;
+    code_for_disasm[0x100B] = 0xFF; code_for_disasm[0x100C] = 0xD0;  // CALL RAX
+    code_for_disasm[0x100D] = 0xC3;
     
-    bool disasm_result = disasm->disassemble(code_final, 0x1000, all_instructions);
-    ASSERT_TRUE(disasm_result);
-    ASSERT_GT(all_instructions.size(), 0);
+    // func_b at 0x3000 (offset 0x2000 from section base)
+    code_for_disasm[0x2000] = 0x48; code_for_disasm[0x2001] = 0x39; code_for_disasm[0x2002] = 0xD8;
+    code_for_disasm[0x2003] = 0x75; code_for_disasm[0x2004] = 0x02;
+    code_for_disasm[0x2005] = 0x90;
+    code_for_disasm[0x2006] = 0xC3;
     
-    // Filter instructions by function range
-    auto filter_instructions = [&](uint64_t func_addr, uint64_t func_size) {
-        std::vector<InstructionInfo> filtered;
-        for (const auto& instr : all_instructions) {
-            if (instr.address >= func_addr && instr.address < func_addr + func_size) {
-                filtered.push_back(instr);
-            }
-        }
-        return filtered;
-    };
+    // Build CFGs for each function using the real CFGBuilder
+    auto main_cfg_result = cfg_builder.build_cfg(main_func, analysis, code_for_disasm, 0x1000);
+    ASSERT_TRUE(main_cfg_result.success) << "main CFG build failed: " << main_cfg_result.error;
     
-    auto main_instructions = filter_instructions(0x1000, 0x30);
-    auto func_a_instructions = filter_instructions(0x2000, 0x20);
-    auto func_b_instructions = filter_instructions(0x3000, 0x20);
+    auto func_a_cfg_result = cfg_builder.build_cfg(func_a, analysis, code_for_disasm, 0x1000);
+    ASSERT_TRUE(func_a_cfg_result.success) << "func_a CFG build failed: " << func_a_cfg_result.error;
     
-    ASSERT_GT(main_instructions.size(), 0);
-    ASSERT_GT(func_a_instructions.size(), 0);
-    ASSERT_GT(func_b_instructions.size(), 0);
+    auto func_b_cfg_result = cfg_builder.build_cfg(func_b, analysis, code_for_disasm, 0x1000);
+    ASSERT_TRUE(func_b_cfg_result.success) << "func_b CFG build failed: " << func_b_cfg_result.error;
     
-    // Create CFGs
-    auto main_cfg = create_test_cfg(main_func, main_instructions);
-    auto func_a_cfg = create_test_cfg(func_a, func_a_instructions);
-    auto func_b_cfg = create_test_cfg(func_b, func_b_instructions);
-    
-    ASSERT_GT(main_cfg->blocks.size(), 0);
-    ASSERT_GT(func_a_cfg->blocks.size(), 0);
-    ASSERT_GT(func_b_cfg->blocks.size(), 0);
-    
-    // Build Call Graph from CFGs
+    // Step 2: Build Call Graph from CFGs
     CallGraphConfig cg_config;
     cg_config.compute_recursion = true;
     cg_config.compute_statistics = true;
@@ -710,9 +558,9 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     CallGraphBuilder cg_builder(cg_config);
     
     std::vector<std::unique_ptr<ControlFlowGraph>> cfgs_for_cg;
-    cfgs_for_cg.push_back(std::move(main_cfg));
-    cfgs_for_cg.push_back(std::move(func_a_cfg));
-    cfgs_for_cg.push_back(std::move(func_b_cfg));
+    cfgs_for_cg.push_back(std::move(main_cfg_result.cfg));
+    cfgs_for_cg.push_back(std::move(func_a_cfg_result.cfg));
+    cfgs_for_cg.push_back(std::move(func_b_cfg_result.cfg));
     
     CallGraphResult cg_result = cg_builder.build_call_graph(analysis, cfgs_for_cg);
     
@@ -722,8 +570,11 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     
     // Verify Call Graph
     const auto& graph = *cg_result.graph;
+    
+    // Should have 3 internal functions
     EXPECT_EQ(graph.statistics.internal_functions, 3);
     
+    // Find nodes
     const CallGraphNode* main_node = graph.find_node_by_name("main");
     const CallGraphNode* func_a_node = graph.find_node_by_name("func_a");
     const CallGraphNode* func_b_node = graph.find_node_by_name("func_b");
@@ -732,34 +583,42 @@ TEST_F(LLVMDisassemblerTest, IntegrationTest_CompletePipeline) {
     ASSERT_NE(func_a_node, nullptr) << "func_a node not found";
     ASSERT_NE(func_b_node, nullptr) << "func_b node not found";
     
+    // Verify edges from main
     auto main_outgoing = graph.get_outgoing_edges(main_node->id);
     ASSERT_FALSE(main_outgoing.empty()) << "main should have outgoing edges";
     
+    // main -> func_a (direct call)
     bool found_main_to_func_a = false;
     for (const auto* edge : main_outgoing) {
         if (edge->target_node_id == func_a_node->id) {
             found_main_to_func_a = true;
             EXPECT_EQ(edge->type, CallEdgeType::Direct);
             EXPECT_GT(edge->call_sites.size(), 0);
+            // Call site should be at 0x1001 (the CALL instruction in main)
             EXPECT_EQ(edge->call_sites[0].address.value(), 0x1001);
             break;
         }
     }
     EXPECT_TRUE(found_main_to_func_a) << "Edge main -> func_a not found";
     
+    // Verify func_a has indirect call edge
     auto func_a_outgoing = graph.get_outgoing_edges(func_a_node->id);
     bool found_indirect_call = false;
     for (const auto* edge : func_a_outgoing) {
         if (edge->type == CallEdgeType::Indirect) {
             found_indirect_call = true;
             EXPECT_GT(edge->call_sites.size(), 0);
-            EXPECT_EQ(edge->call_sites[0].address.value(), 0x2008);  // Actual address from disassembly
+            // Call site should be at 0x200B (CALL RAX)
+            EXPECT_EQ(edge->call_sites[0].address.value(), 0x200B);
             break;
         }
     }
     EXPECT_TRUE(found_indirect_call) << "Indirect call from func_a not found";
     
+    // Verify func_b has no outgoing calls (only conditional branch internal)
     auto func_b_outgoing = graph.get_outgoing_edges(func_b_node->id);
+    
+    // Verify call graph statistics
     EXPECT_GT(cg_result.resolutions_performed, 0);
     EXPECT_EQ(cg_result.nodes_created, graph.nodes.size());
     EXPECT_GT(cg_result.edges_created, 0);

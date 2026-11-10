@@ -932,13 +932,13 @@ CallResolution CallGraphBuilder::resolve_direct_call(BuildContext&, const CallSi
     resolution.site = site;
     resolution.edge_type = CallEdgeType::Direct;
     
-    if (!site.address.valid()) {
+    if (!site.target_address.has_value()) {
         resolution.is_ambiguous = true;
         resolution.ambiguity_reason = "No target address";
         return resolution;
     }
     
-    uint64_t target_addr = site.address.value();
+    uint64_t target_addr = site.target_address->value();
     CallTarget target(TypedAddress::va(target_addr), CallResolutionConfidence::High, "Direct call");
     target.address = TypedAddress::va(target_addr);
     
@@ -1098,6 +1098,7 @@ std::vector<CallSite> CallGraphBuilder::extract_call_sites(BuildContext& ctx,
             for (uint64_t target_addr : func.call_targets) {
                 CallSite site;
                 site.address = TypedAddress::va(target_addr);
+                site.target_address = TypedAddress::va(target_addr);
                 site.caller = const_cast<FunctionInfo*>(&func);
                 site.mnemonic = "call";
                 site.operands = "0x" + std::to_string(target_addr);
@@ -1110,20 +1111,41 @@ std::vector<CallSite> CallGraphBuilder::extract_call_sites(BuildContext& ctx,
     return call_sites;
 }
 
-std::vector<CallSite> CallGraphBuilder::extract_call_sites_from_cfg(BuildContext&, 
-                                                                      const ControlFlowGraph& cfg) {
+std::vector<CallSite> CallGraphBuilder::extract_call_sites_from_cfg(BuildContext& ctx, 
+                                                                       const ControlFlowGraph& cfg) {
     std::vector<CallSite> call_sites;
     
+    // Find the function in the analysis that corresponds to this CFG
+    const FunctionInfo* caller_func = nullptr;
+    if (ctx.analysis) {
+        for (const auto& func : ctx.analysis->functions) {
+            if (func.address == cfg.function.address) {
+                caller_func = &func;
+                break;
+            }
+        }
+    }
+    if (!caller_func) {
+        caller_func = &cfg.function;
+    }
+    
     for (const auto& block : cfg.blocks) {
-        for (const auto& edge : block.successors) {
-            if (edge.type == CFGEdgeType::Call || edge.type == CFGEdgeType::IndirectCall) {
+        for (const auto& instr : block.instructions) {
+            if (instr.is_call) {
                 CallSite site;
-                site.address = TypedAddress::va(block.start_address + block.size - 5);
-                site.caller = const_cast<FunctionInfo*>(&cfg.function);
-                site.mnemonic = edge.type == CFGEdgeType::Call ? "call" : "call";
-                site.operands = edge.target_address ? "0x" + std::to_string(edge.target_address.value()) : "indirect";
-                site.edge_type = edge.type == CFGEdgeType::Call ? CallEdgeType::Direct : CallEdgeType::Indirect;
-                site.is_resolved = edge.is_resolved;
+                site.address = TypedAddress::va(instr.address);
+                site.caller = const_cast<FunctionInfo*>(caller_func);
+                site.mnemonic = instr.mnemonic;
+                site.operands = instr.operands;
+                site.instruction_bytes.clear();
+                for (uint8_t b : instr.bytes) {
+                    char buf[3];
+                    snprintf(buf, sizeof(buf), "%02X", b);
+                    site.instruction_bytes += buf;
+                }
+                site.edge_type = instr.is_indirect ? CallEdgeType::Indirect : CallEdgeType::Direct;
+                site.is_resolved = instr.target_address.has_value();
+                if (instr.target_address.has_value()) site.target_address = TypedAddress::va(instr.target_address.value());
                 call_sites.push_back(std::move(site));
             }
         }

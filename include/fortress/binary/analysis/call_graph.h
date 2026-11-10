@@ -43,13 +43,14 @@ enum class CallEdgeType : uint8_t {
 
 // Call site information
 struct CallSite {
-    TypedAddress address;           // Address of CALL instruction
-    FunctionInfo* caller = nullptr; // Caller function
-    std::string instruction_bytes;  // Raw bytes of instruction
-    std::string mnemonic;           // Instruction mnemonic
-    std::string operands;           // Instruction operands
+    TypedAddress address;               // Address of CALL instruction
+    FunctionInfo* caller = nullptr;     // Caller function
+    std::string instruction_bytes;      // Raw bytes of instruction
+    std::string mnemonic;               // Instruction mnemonic
+    std::string operands;               // Instruction operands
     CallEdgeType edge_type = CallEdgeType::Unknown;
     bool is_resolved = false;
+    std::optional<TypedAddress> target_address; // Target address for direct calls
     
     CallSite() = default;
     CallSite(TypedAddress addr, FunctionInfo* call, const std::string& mnem, const std::string& ops, CallEdgeType type)
