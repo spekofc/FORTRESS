@@ -31,6 +31,7 @@ add_executable(fortress_tests
     unit/test_cfg.cpp
     unit/test_call_graph.cpp
     unit/test_llvm_disassembler.cpp
+    unit/test_xref.cpp
 )
 
 target_link_libraries(fortress_tests PRIVATE
