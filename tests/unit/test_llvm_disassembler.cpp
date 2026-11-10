@@ -253,11 +253,10 @@ TEST_F(LLVMDisassemblerTest, MultipleInstructions) {
 // Test: CALL to external function (rel32 to external)
 TEST_F(LLVMDisassemblerTest, CallExternal) {
     // CALL to 0x7FFC0000 (simulated external address)
-    // CALL rel32: E8 FB EF FF 7F (call 0x7FFC0000 from 0x1000)
-    // 0x7FFC0000 - 0x1005 = 0x7FFBEFFB
-    // TODO: Relative address calculation has an off-by-0x40000 bug
-    // Current behavior: target_address = 0x80000000 (off by 0x40000)
-    std::vector<uint8_t> code = {0xE8, 0xFB, 0xEF, 0xFF, 0x7F};
+    // CALL rel32: E8 FB EF FB 7F (call 0x7FFC0000 from 0x1000)
+    // 0x7FFC0000 - 0x1005 = 0x7FFBEFFB (displacement)
+    // Bytes: E8 FB EF FB 7F
+    std::vector<uint8_t> code = {0xE8, 0xFB, 0xEF, 0xFB, 0x7F};
     std::vector<InstructionInfo> instructions;
     
     bool result = disassembler_->disassemble(code, 0x1000, instructions);
@@ -269,7 +268,182 @@ TEST_F(LLVMDisassemblerTest, CallExternal) {
     EXPECT_EQ(instr.mnemonic, "call");
     EXPECT_TRUE(instr.is_call);
     EXPECT_TRUE(instr.target_address.has_value());
-    // TODO: Fix relative address calculation - currently returns 0x80000000 instead of 0x7FFC0000
-    EXPECT_EQ(instr.target_address.value(), 0x80000000);
+    EXPECT_EQ(instr.target_address.value(), 0x7FFC0000);
+}
+
+// Test: CALL rel32 with zero displacement
+TEST_F(LLVMDisassemblerTest, CallRel32ZeroDisp) {
+    // CALL rel32: E8 00 00 00 00 (call to next instruction)
+    std::vector<uint8_t> code = {0xE8, 0x00, 0x00, 0x00, 0x00};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "call");
+    EXPECT_TRUE(instr.is_call);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0x1005);
+}
+
+// Test: CALL rel32 with positive displacement
+TEST_F(LLVMDisassemblerTest, CallRel32Positive) {
+    // CALL rel32: E8 0A 00 00 00 (call +10 bytes forward)
+    std::vector<uint8_t> code = {0xE8, 0x0A, 0x00, 0x00, 0x00};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "call");
+    EXPECT_TRUE(instr.is_call);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0x100F);  // 0x1000 + 5 + 10
+}
+
+// Test: CALL rel32 with negative displacement (backwards call)
+TEST_F(LLVMDisassemblerTest, CallRel32Negative) {
+    // CALL rel32: E8 FA FF FF FF (call -6 bytes backward)
+    std::vector<uint8_t> code = {0xE8, 0xFA, 0xFF, 0xFF, 0xFF};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "call");
+    EXPECT_TRUE(instr.is_call);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0xFFF);  // 0x1000 + 5 - 6 = 0xFFF (4095)
+}
+
+// Test: CALL rel32 to previous instruction (call -5)
+TEST_F(LLVMDisassemblerTest, CallRel32ToPrev) {
+    // CALL rel32: E8 FB FF FF FF (call -5 bytes, to itself)
+    std::vector<uint8_t> code = {0xE8, 0xFB, 0xFF, 0xFF, 0xFF};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "call");
+    EXPECT_TRUE(instr.is_call);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0x1000);  // 0x1000 + 5 - 5
+}
+
+// Test: JMP rel32 with various displacements
+TEST_F(LLVMDisassemblerTest, JmpRel32Variants) {
+    // JMP +10: E9 0A 00 00 00
+    std::vector<uint8_t> code = {0xE9, 0x0A, 0x00, 0x00, 0x00};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "jmp");
+    EXPECT_TRUE(instr.is_jump);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0x100F);
+}
+
+// Test: JNE short with positive displacement
+TEST_F(LLVMDisassemblerTest, JneShortPositive) {
+    // JNE +10: 75 0A
+    std::vector<uint8_t> code = {0x75, 0x0A};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "jne");
+    EXPECT_TRUE(instr.is_jump);
+    EXPECT_TRUE(instr.is_conditional_jump);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0x100C);  // 0x1000 + 2 + 10
+}
+
+// Test: JNE short with negative displacement
+TEST_F(LLVMDisassemblerTest, JneShortNegative) {
+    // JNE -6: 75 FA
+    std::vector<uint8_t> code = {0x75, 0xFA};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "jne");
+    EXPECT_TRUE(instr.is_jump);
+    EXPECT_TRUE(instr.is_conditional_jump);
+    EXPECT_TRUE(instr.target_address.has_value());
+    EXPECT_EQ(instr.target_address.value(), 0xFFC);  // 0x1000 + 2 - 6 = 0xFFC (4092)
+}
+
+// Test: CALL/JMP near INT64_MAX boundary
+TEST_F(LLVMDisassemblerTest, CallRel32NearMax) {
+    // CALL to near UINT64_MAX
+    // displacement = 0x7FFFFFFA (little-endian FA FF FF 7F)
+    // This tests overflow handling
+    std::vector<uint8_t> code = {0xE8, 0xFA, 0xFF, 0xFF, 0x7F};  // Large positive displacement
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 1);
+    
+    const auto& instr = instructions[0];
+    EXPECT_EQ(instr.mnemonic, "call");
+    EXPECT_TRUE(instr.is_call);
+    EXPECT_TRUE(instr.target_address.has_value());
+    // Verify overflow wraps correctly: 0x1000 + 5 + 0x7FFFFFFA = 0x80000FFF
+    EXPECT_EQ(instr.target_address.value(), 0x80000FFF);
+}
+
+// Test: Instructions with different sizes
+TEST_F(LLVMDisassemblerTest, MixedInstructionSizes) {
+    // NOP (1 byte) + CALL rel32 (5 bytes) + RET (1 byte)
+    std::vector<uint8_t> code = {0x90, 0xE8, 0x00, 0x00, 0x00, 0x00, 0xC3};
+    std::vector<InstructionInfo> instructions;
+    
+    bool result = disassembler_->disassemble(code, 0x1000, instructions);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(instructions.size(), 3);
+    
+    EXPECT_EQ(instructions[0].address, 0x1000);
+    EXPECT_EQ(instructions[0].size, 1);
+    EXPECT_EQ(instructions[0].mnemonic, "nop");
+    
+    EXPECT_EQ(instructions[1].address, 0x1001);
+    EXPECT_EQ(instructions[1].size, 5);
+    EXPECT_EQ(instructions[1].mnemonic, "call");
+    EXPECT_TRUE(instructions[1].is_call);
+    EXPECT_TRUE(instructions[1].target_address.has_value());
+    EXPECT_EQ(instructions[1].target_address.value(), 0x1006);
+    
+    EXPECT_EQ(instructions[2].address, 0x1006);
+    EXPECT_EQ(instructions[2].size, 1);
+    EXPECT_EQ(instructions[2].mnemonic, "ret");
 }
 

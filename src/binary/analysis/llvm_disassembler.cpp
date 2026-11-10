@@ -296,11 +296,10 @@ struct LLVMDisassembler::Internal {
                 }
             }
             info.mnemonic = clean_mnemonic;
+            
             info.format = "at&t";  // LLVM outputs AT&T syntax
             
             // Parse target address for direct calls and jumps
-            // For relative calls/jumps, calculate: target = instruction_address + instruction_size + sign_extended_immediate
-            // Operands format: "0x401000" or "0" or "2" or "2147479547" or "*%rax" or "(%rax)" or "0x401000(%rip)"
             std::string operands_lower = info.operands;
             std::transform(operands_lower.begin(), operands_lower.end(), operands_lower.begin(), ::tolower);
             
@@ -309,89 +308,196 @@ struct LLVMDisassembler::Internal {
                 operands_lower.find('(') != std::string::npos ||
                 operands_lower.find('%') != std::string::npos) {
                 info.is_indirect = true;
+            } else {
+                info.is_indirect = false;
             }
             
-            // Parse immediate value from operands (for relative calls/jumps)
-            int64_t immediate = 0;
-            bool has_immediate = false;
-            
-            // Check for hex address (0x...)
-            size_t hex_start = info.operands.find("0x");
-            if (hex_start == std::string::npos) {
-                hex_start = info.operands.find("0X");
-            }
-            if (hex_start != std::string::npos) {
-                size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
-                std::string hex_str = info.operands.substr(hex_start, hex_end - hex_start);
-                try {
-                    int64_t imm = std::stoll(info.operands.substr(hex_start), nullptr, 16);
-                    immediate = imm;
-                    has_immediate = true;
-                } catch (...) {
-                    // Ignore parse errors
-                }
-            }
-            
-            // If no hex address found, check for decimal address (sequence of digits)
-            if (!has_immediate) {
-                // Look for decimal number in operands (including negative)
-                std::string operands_copy = info.operands;
-                // Remove any leading non-digit characters (except minus)
-                size_t digit_start = operands_copy.find_first_of("0123456789-");
-                if (digit_start != std::string::npos) {
-                    // Check if it's a minus sign followed by digits
-                    size_t digit_end = digit_start;
-                    if (operands_copy[digit_start] == '-') {
-                        digit_end = digit_start + 1;
-                    } else {
-                        digit_end = digit_start;
+            // Parse target address based on instruction type
+            if (!info.is_indirect) {
+                // Check if this is a relative call/jump (CALL/JMP rel32, Jcc rel8/rel32)
+                bool is_relative = false;
+                if (info.mnemonic == "call" || info.mnemonic == "jmp") {
+                    if (size == 5) {  // CALL/JMP rel32 are 5 bytes
+                        is_relative = true;
                     }
-                    digit_end = operands_copy.find_first_not_of("0123456789", digit_end);
-                    std::string dec_str = operands_copy.substr(digit_start, digit_end - digit_start);
-                    try {
-                        int64_t imm = std::stoll(dec_str, nullptr, 10);
-                        immediate = imm;
-                        has_immediate = true;
-                    } catch (...) {
-                        // Ignore parse errors
+                } else if (size == 2 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
+                    // Short jumps (Jcc rel8) are 2 bytes
+                    is_relative = true;
+                } else if (size == 6 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
+                    // Jcc rel32 can be 6 bytes (0F 8x)
+                    is_relative = true;
+                }
+                
+                if (is_relative) {
+                    // For relative calls/jumps, LLVM prints the displacement
+                    // Parse the displacement (try decimal first, then hex, since LLVM prints decimal by default)
+                    int64_t displacement = 0;
+                    bool has_disp = false;
+                    
+                    // Try decimal first (LLVM prints relative displacements in decimal by default)
+                    size_t dec_start = info.operands.find_first_of("0123456789-");
+                    if (dec_start != std::string::npos) {
+                        size_t dec_end = dec_start;
+                        if (info.operands[dec_start] == '-') {
+                            dec_end = dec_start + 1;
+                        } else {
+                            dec_end = dec_start;
+                        }
+                        dec_end = info.operands.find_first_not_of("0123456789", dec_end);
+                        std::string dec_str = info.operands.substr(dec_start, dec_end - dec_start);
+                        try {
+                            int64_t disp = std::stoll(info.operands.substr(dec_start, dec_end - dec_start), nullptr, 10);
+                            displacement = disp;
+                            has_disp = true;
+                        } catch (...) {
+                            // Ignore parse errors
+                        }
                     }
-                }
-            }
-            
-            // For relative calls/jumps (not indirect), calculate absolute target address
-            // target = instruction_address + instruction_size + sign_extended_immediate
-            if (has_immediate && !info.is_indirect) {
-                uint64_t instr_addr = base_address + offset;
-                int64_t target = static_cast<int64_t>(instr_addr) + static_cast<int64_t>(size) + immediate;
-                info.target_address = static_cast<uint64_t>(target);
-            } else if (!info.is_indirect) {
-                // For direct absolute calls/jumps, try to parse absolute address
-                // Check for hex address (0x...)
-                size_t abs_hex_start = info.operands.find("0x");
-                if (abs_hex_start == std::string::npos) {
-                    abs_hex_start = info.operands.find("0X");
-                }
-                if (abs_hex_start != std::string::npos) {
-                    size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
-                    std::string hex_str = info.operands.substr(hex_start, hex_end - hex_start);
-                    try {
-                        uint64_t target_addr = std::stoull(info.operands.substr(hex_start), nullptr, 16);
-                        info.target_address = target_addr;
-                    } catch (...) {
-                        // Ignore parse errors
+                    
+                    // If no decimal, check for hex with 0x/0X prefix
+                    if (!has_disp) {
+                        size_t hex_start = info.operands.find("0x");
+                        if (hex_start == std::string::npos) {
+                            hex_start = info.operands.find("0X");
+                        }
+                        if (hex_start != std::string::npos) {
+                            // size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
+                            try {
+                                int64_t disp = std::stoll(info.operands.substr(hex_start), nullptr, 16);
+                                displacement = disp;
+                                has_disp = true;
+                            } catch (...) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                    
+                    // If no hex with prefix, check for hex without prefix (all hex digits, optionally with minus)
+                    if (!has_disp) {
+                        std::string ops_copy = info.operands;
+                        bool all_hex = true;
+                        size_t start_idx = 0;
+                        if (!ops_copy.empty() && ops_copy[0] == '-') {
+                            start_idx = 1;
+                        }
+                        for (size_t i = start_idx; i < ops_copy.size(); ++i) {
+                            char c = ops_copy[i];
+                            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+                                all_hex = false;
+                                break;
+                            }
+                        }
+                        if (all_hex && !ops_copy.empty() && ops_copy != "-") {
+                            try {
+                                int64_t disp = std::stoll(info.operands, nullptr, 16);
+                                displacement = disp;
+                                has_disp = true;
+                            } catch (...) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                    
+                    // If no hex, check for decimal displacement
+                    if (!has_disp) {
+                        std::string ops_copy2 = info.operands;
+                        size_t dec_start2 = ops_copy2.find_first_of("0123456789-");
+                        if (dec_start2 != std::string::npos) {
+                            size_t dec_end2 = dec_start2;
+                            if (ops_copy2[dec_start2] == '-') {
+                                dec_end2 = dec_start2 + 1;
+                            } else {
+                                dec_end2 = dec_start2;
+                            }
+                            dec_end2 = ops_copy2.find_first_not_of("0123456789", dec_end2);
+                            std::string dec_str = ops_copy2.substr(dec_start2, dec_end2 - dec_start2);
+                            try {
+                                int64_t disp = std::stoll(dec_str, nullptr, 10);
+                                displacement = disp;
+                                has_disp = true;
+                            } catch (...) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                    
+                    if (has_disp) {
+                        // For relative instructions, calculate target = next_instruction + displacement
+                        // sign-extend based on instruction type
+                        int64_t disp_val = displacement;
+                        
+                        // sign-extend based on instruction type
+                        if (size == 5 && (info.mnemonic == "call" || info.mnemonic == "jmp")) {
+                            // rel32: sign-extend from 32-bit
+                            if (disp_val > 0x7FFFFFFF) {
+                                disp_val -= 0x100000000LL;
+                            }
+                        } else if (size == 2 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
+                            // rel8 (short jump): sign-extend from 8-bit
+                            if (disp_val > 0x7F) {
+                                disp_val -= 0x100LL;
+                            }
+                        } else if (size == 6 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
+                            // Jcc rel32 (0F 8x)
+                            if (disp_val > 0x7FFFFFFF) {
+                                disp_val -= 0x100000000LL;
+                            }
+                        }
+                        
+                        int64_t target = static_cast<int64_t>(base_address + offset) + static_cast<int64_t>(size) + disp_val;
+                        info.target_address = static_cast<uint64_t>(target);
                     }
                 } else {
-                    // If no hex address found, check for decimal address (sequence of digits)
-                    std::string operands_copy = info.operands;
-                    size_t digit_start = operands_copy.find_first_of("0123456789");
-                    if (digit_start != std::string::npos) {
-                        size_t digit_end = operands_copy.find_first_not_of("0123456789", digit_start);
-                        std::string dec_str = operands_copy.substr(digit_start, digit_end - digit_start);
+                    // Direct absolute call/jump - LLVM prints the target address directly
+                    // Try to parse as absolute address (hex with or without 0x prefix, or decimal)
+                    
+                    // Check for hex with 0x/0X prefix
+                    size_t abs_hex_start = info.operands.find("0x");
+                    if (abs_hex_start == std::string::npos) {
+                        abs_hex_start = info.operands.find("0X");
+                    }
+                    if (abs_hex_start != std::string::npos) {
+                        // size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", abs_hex_start + 2);
                         try {
-                            uint64_t target_addr = std::stoull(dec_str, nullptr, 10);
+                            uint64_t target_addr = std::stoull(info.operands.substr(abs_hex_start), nullptr, 16);
                             info.target_address = target_addr;
                         } catch (...) {
                             // Ignore parse errors
+                        }
+                    } else {
+                        // If no hex with prefix, check for hex without prefix (all hex digits)
+                        std::string abs_ops_copy = info.operands;
+                        bool all_hex = true;
+                        size_t abs_start_idx = 0;
+                        if (!abs_ops_copy.empty() && abs_ops_copy[0] == '-') {
+                            // Absolute addresses shouldn't be negative, but handle anyway
+                        }
+                        for (size_t i = abs_start_idx; i < abs_ops_copy.size(); ++i) {
+                            char c = abs_ops_copy[i];
+                            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+                                all_hex = false;
+                                break;
+                            }
+                        }
+                        if (all_hex && !abs_ops_copy.empty() && abs_ops_copy != "-") {
+                            try {
+                                uint64_t target_addr = std::stoull(info.operands, nullptr, 16);
+                                info.target_address = target_addr;
+                            } catch (...) {
+                                // Ignore parse errors
+                            }
+                        }
+                        
+                        // If no hex, check for decimal address
+                        size_t abs_digit_start = info.operands.find_first_of("0123456789");
+                        if (abs_digit_start != std::string::npos) {
+                            size_t abs_digit_end = info.operands.find_first_not_of("0123456789", abs_digit_start);
+                            try {
+                                uint64_t target_addr = std::stoull(info.operands.substr(abs_digit_start, abs_digit_end - abs_digit_start), nullptr, 10);
+                                info.target_address = target_addr;
+                            } catch (...) {
+                                // Ignore parse errors
+                            }
                         }
                     }
                 }
