@@ -3,7 +3,7 @@
 **Project**: FORTRESS  
 **Phase**: 3 — Advanced Static Analysis Engine  
 **Prerequisite**: Phase 2 Binary Analyzer Core (must be complete and validated)  
-**Status**: Milestone 1 Complete, Milestone 2+ Planned  
+**Status**: Milestone 1 Complete, Milestone 2 Complete, Milestone 3 Complete  
 
 ---
 
@@ -27,7 +27,7 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 |-----------|-------|--------|--------|
 | **M1: Analysis Data Model** | Unified normalized representation, typed addresses, format-specific converters, round-trip normalization | ✅ **Complete** | Week 1 |
 | **M2: CFG Builder** | Basic blocks, edges, JSON/DOT output, loop detection, dominators | ✅ **Complete** | Week 2-3 |
-| **M3: Call Graph** | Nodes, edges, resolution, DOT/JSON export, recursion, imports | ✅ **Core Complete** | Week 3-4 |
+| **M3: Call Graph** | Nodes, edges, resolution, DOT/JSON export, recursion, imports | ✅ **Complete** | Week 3-4 |
 | **M4: XREF Database** | In-memory + SQLite, query API | 📋 Planned | Week 4-5 |
 | **M5: Function Refiner** | Boundary refinement, confidence scoring | 📋 Planned | Week 5-6 |
 | **M6: String Analyzer** | Encoding detection, classification | 📋 Planned | Week 6-7 |
@@ -65,10 +65,11 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | CoreHash | 12 | ✅ 12/12 passing |
 | CoreTypes/Error/String/File | 15 | ✅ 15/15 passing |
 | CFGBuilderTest | 15 | ✅ 15/15 passing |
-| CallGraphBuilderTest | 24 | 15/24 passing (core infrastructure solid) |
-| **Total** | **162/162** | **153/162 passing** (93.8%) |
+| CallGraphBuilderTest | 24 | ✅ 24/24 passing |
+| LLVMDisassemblerTest | 24 | ✅ 24/24 passing |
+| **Total** | **186/186** | **186/186 passing** (100%) |
 
-**153/162 tests passing in Debug configuration** (94.4% - 9 CallGraph tests failing due to recursion/merge edge cases; core infrastructure solid).
+**186/186 tests passing in Debug configuration** (100% - all tests passing including LLVM MC Disassembler hardening).
 
 ### Files Added/Modified
 

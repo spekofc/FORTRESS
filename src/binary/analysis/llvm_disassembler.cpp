@@ -11,6 +11,7 @@
 #include <optional>
 #include <mutex>
 #include <iostream>
+#include <cstdint>
 
 #if defined(FORTRESS_USE_LLVM_DISASSEMBLER) && FORTRESS_USE_LLVM_DISASSEMBLER
 #include <llvm/MC/MCContext.h>
@@ -28,9 +29,66 @@
 #include <llvm/Support/ErrorOr.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/TargetParser/Triple.h>
+#include <llvm/MC/MCInstrAnalysis.h>
+#include <llvm/MC/MCInstPrinter.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/MC/MCExpr.h>
 #endif
 
 namespace fortress {
+
+// ============================================================================
+// Safe address arithmetic helpers
+// ============================================================================
+
+namespace {
+    // Safe addition with overflow check
+    [[maybe_unused]] bool safe_add(uint64_t a, uint64_t b, uint64_t& result) {
+        if (a > std::numeric_limits<uint64_t>::max() - b) {
+            return false;
+        }
+        result = a + b;
+        return true;
+    }
+    
+    // Safe subtraction with underflow check
+    [[maybe_unused]] bool safe_sub(uint64_t a, uint64_t b, uint64_t& result) {
+        if (a < b) {
+            return false;
+        }
+        result = a - b;
+        return true;
+    }
+    
+    // Safe signed addition (for displacement calculation)
+    [[maybe_unused]] bool safe_add_signed(uint64_t base, int64_t disp, uint64_t& result) {
+        if (disp >= 0) {
+            return safe_add(base, static_cast<uint64_t>(disp), result);
+        } else {
+            uint64_t abs_disp = static_cast<uint64_t>(-disp);
+            return safe_sub(base, abs_disp, result);
+        }
+    }
+    
+    // Calculate relative branch target: target = address + size + sign_extended_displacement
+    // Returns false on overflow
+    [[maybe_unused]] bool calculate_relative_target(uint64_t address, uint64_t size, int64_t displacement, uint64_t& target) {
+        uint64_t next_ip = 0;
+        if (!safe_add(address, size, next_ip)) {
+            return false;
+        }
+        return safe_add_signed(next_ip, displacement, target);
+    }
+    
+    // Check if address is canonical (x86-64)
+    [[maybe_unused]] bool is_canonical_address(uint64_t addr) {
+        // In x86-64, canonical addresses have bits 63:48 all 0 or all 1
+        uint64_t top_bits = addr >> 48;
+        return top_bits == 0 || top_bits == 0xFFFF;
+    }
+}
 
 // ============================================================================
 // LLVMDisassembler Implementation (Internal defined here for PIMPL)
@@ -56,6 +114,7 @@ struct LLVMDisassembler::Internal {
     std::unique_ptr<llvm::MCDisassembler> disassembler_;
     std::unique_ptr<llvm::MCInstPrinter> printer_;
     std::unique_ptr<llvm::MCContext> context_;
+    std::unique_ptr<llvm::MCInstrAnalysis> instr_analysis_;
 
     Internal(Architecture arch, Endianness endianness, bool is_64bit)
         : arch_(arch), endianness_(endianness), is_64bit_(is_64bit) {
@@ -131,6 +190,13 @@ struct LLVMDisassembler::Internal {
         printer_ = std::unique_ptr<llvm::MCInstPrinter>(target_->createMCInstPrinter(
             llvm_triple, 0, *mai_, *mii_, *mri_));
         if (!printer_) {
+            status_ = Status::InitializationFailed;
+            return;
+        }
+
+        // Create instruction analysis for proper semantic classification
+        instr_analysis_ = std::unique_ptr<llvm::MCInstrAnalysis>(target_->createMCInstrAnalysis(mii_.get()));
+        if (!instr_analysis_) {
             status_ = Status::InitializationFailed;
             return;
         }
@@ -254,10 +320,10 @@ struct LLVMDisassembler::Internal {
             info.size = size;
             info.bytes.assign(code.data() + offset, code.data() + offset + size);
             
-            // Get mnemonic and operands
+            // Get mnemonic and operands using LLVM's printer
             std::string asm_string;
             llvm::raw_string_ostream os(asm_string);
-            // LLVM 18+ printInst signature: printInst(const MCInst*, uint64_t, StringRef, const MCSubtargetInfo&, raw_ostream&)
+            // printInst signature: printInst(const MCInst*, uint64_t Address, StringRef Annot, const MCSubtargetInfo&, raw_ostream&)
             printer_->printInst(&inst, base_address + offset, "", *sti_, os);
             os.flush();
 
@@ -299,237 +365,162 @@ struct LLVMDisassembler::Internal {
             
             info.format = "at&t";  // LLVM outputs AT&T syntax
             
-            // Parse target address for direct calls and jumps
-            std::string operands_lower = info.operands;
-            std::transform(operands_lower.begin(), operands_lower.end(), operands_lower.begin(), ::tolower);
+            // Use MCInstrAnalysis for proper semantic classification
+            bool is_indirect = false;
+            std::optional<uint64_t> target_address;
+            bool is_call = false;
+            bool is_jump = false;
+            bool is_conditional_jump = false;
+            bool is_return = false;
             
-            // Check for indirect calls/jumps (register or memory indirect)
-            if (operands_lower.find('*') != std::string::npos || 
-                operands_lower.find('(') != std::string::npos ||
-                operands_lower.find('%') != std::string::npos) {
-                info.is_indirect = true;
-            } else {
-                info.is_indirect = false;
-            }
-            
-            // Parse target address based on instruction type
-            if (!info.is_indirect) {
-                // Check if this is a relative call/jump (CALL/JMP rel32, Jcc rel8/rel32)
-                bool is_relative = false;
-                if (info.mnemonic == "call" || info.mnemonic == "jmp") {
-                    if (size == 5) {  // CALL/JMP rel32 are 5 bytes
-                        is_relative = true;
-                    }
-                } else if (size == 2 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
-                    // Short jumps (Jcc rel8) are 2 bytes
-                    is_relative = true;
-                } else if (size == 6 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
-                    // Jcc rel32 can be 6 bytes (0F 8x)
-                    is_relative = true;
-                }
-                
-                if (is_relative) {
-                    // For relative calls/jumps, LLVM prints the displacement
-                    // Parse the displacement (try decimal first, then hex, since LLVM prints decimal by default)
-                    int64_t displacement = 0;
-                    bool has_disp = false;
-                    
-                    // Try decimal first (LLVM prints relative displacements in decimal by default)
-                    size_t dec_start = info.operands.find_first_of("0123456789-");
-                    if (dec_start != std::string::npos) {
-                        size_t dec_end = dec_start;
-                        if (info.operands[dec_start] == '-') {
-                            dec_end = dec_start + 1;
-                        } else {
-                            dec_end = dec_start;
+            // Check for indirect calls/jumps using MCInstrAnalysis
+            if (instr_analysis_) {
+                if (instr_analysis_->isCall(inst)) {
+                    is_call = true;
+                    // Check for indirect call by examining operands (MCInstrAnalysis may not have isIndirectCall)
+                    // Indirect calls have register or memory operands, not immediate
+                    bool is_indirect_call = false;
+                    for (unsigned i = 0; i < inst.getNumOperands(); ++i) {
+                        const llvm::MCOperand& op = inst.getOperand(i);
+                        if (op.isReg()) {
+                            is_indirect_call = true;
+                            break;
                         }
-                        dec_end = info.operands.find_first_not_of("0123456789", dec_end);
-                        std::string dec_str = info.operands.substr(dec_start, dec_end - dec_start);
-                        try {
-                            int64_t disp = std::stoll(info.operands.substr(dec_start, dec_end - dec_start), nullptr, 10);
-                            displacement = disp;
-                            has_disp = true;
-                        } catch (...) {
-                            // Ignore parse errors
-                        }
-                    }
-                    
-                    // If no decimal, check for hex with 0x/0X prefix
-                    if (!has_disp) {
-                        size_t hex_start = info.operands.find("0x");
-                        if (hex_start == std::string::npos) {
-                            hex_start = info.operands.find("0X");
-                        }
-                        if (hex_start != std::string::npos) {
-                            // size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
-                            try {
-                                int64_t disp = std::stoll(info.operands.substr(hex_start), nullptr, 16);
-                                displacement = disp;
-                                has_disp = true;
-                            } catch (...) {
-                                // Ignore parse errors
-                            }
-                        }
-                    }
-                    
-                    // If no hex with prefix, check for hex without prefix (all hex digits, optionally with minus)
-                    if (!has_disp) {
-                        std::string ops_copy = info.operands;
-                        bool all_hex = true;
-                        size_t start_idx = 0;
-                        if (!ops_copy.empty() && ops_copy[0] == '-') {
-                            start_idx = 1;
-                        }
-                        for (size_t i = start_idx; i < ops_copy.size(); ++i) {
-                            char c = ops_copy[i];
-                            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
-                                all_hex = false;
+                        if (op.isExpr()) {
+                            const llvm::MCExpr* expr = op.getExpr();
+                            // If it's not a constant expression, it's indirect (register/memory)
+                            if (expr->getKind() != llvm::MCExpr::Constant) {
+                                is_indirect_call = true;
                                 break;
                             }
                         }
-                        if (all_hex && !ops_copy.empty() && ops_copy != "-") {
-                            try {
-                                int64_t disp = std::stoll(info.operands, nullptr, 16);
-                                displacement = disp;
-                                has_disp = true;
-                            } catch (...) {
-                                // Ignore parse errors
-                            }
-                        }
                     }
-                    
-                    // If no hex, check for decimal displacement
-                    if (!has_disp) {
-                        std::string ops_copy2 = info.operands;
-                        size_t dec_start2 = ops_copy2.find_first_of("0123456789-");
-                        if (dec_start2 != std::string::npos) {
-                            size_t dec_end2 = dec_start2;
-                            if (ops_copy2[dec_start2] == '-') {
-                                dec_end2 = dec_start2 + 1;
-                            } else {
-                                dec_end2 = dec_start2;
-                            }
-                            dec_end2 = ops_copy2.find_first_not_of("0123456789", dec_end2);
-                            std::string dec_str = ops_copy2.substr(dec_start2, dec_end2 - dec_start2);
-                            try {
-                                int64_t disp = std::stoll(dec_str, nullptr, 10);
-                                displacement = disp;
-                                has_disp = true;
-                            } catch (...) {
-                                // Ignore parse errors
-                            }
-                        }
+                    if (is_indirect_call) {
+                        is_indirect = true;
+                        info.is_indirect = true;
                     }
-                    
-                    if (has_disp) {
-                        // For relative instructions, calculate target = next_instruction + displacement
-                        // sign-extend based on instruction type
-                        int64_t disp_val = displacement;
-                        
-                        // sign-extend based on instruction type
-                        if (size == 5 && (info.mnemonic == "call" || info.mnemonic == "jmp")) {
-                            // rel32: sign-extend from 32-bit
-                            if (disp_val > 0x7FFFFFFF) {
-                                disp_val -= 0x100000000LL;
-                            }
-                        } else if (size == 2 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
-                            // rel8 (short jump): sign-extend from 8-bit
-                            if (disp_val > 0x7F) {
-                                disp_val -= 0x100LL;
-                            }
-                        } else if (size == 6 && info.mnemonic.length() > 1 && info.mnemonic[0] == 'j') {
-                            // Jcc rel32 (0F 8x)
-                            if (disp_val > 0x7FFFFFFF) {
-                                disp_val -= 0x100000000LL;
-                            }
-                        }
-                        
-                        int64_t target = static_cast<int64_t>(base_address + offset) + static_cast<int64_t>(size) + disp_val;
-                        info.target_address = static_cast<uint64_t>(target);
+                }
+                
+                if (instr_analysis_->isBranch(inst)) {
+                    is_jump = true;
+                    if (instr_analysis_->isIndirectBranch(inst)) {
+                        is_indirect = true;
+                    }
+                    if (instr_analysis_->isConditionalBranch(inst)) {
+                        is_conditional_jump = true;
+                    }
+                }
+                
+                if (instr_analysis_->isReturn(inst)) {
+                    is_return = true;
+                }
+                
+                // Assign MCInstrAnalysis results
+                info.is_call = is_call;
+                info.is_jump = is_jump;
+                info.is_conditional_jump = is_conditional_jump;
+                info.is_return = is_return;
+                info.is_indirect = is_indirect;
+            } else {
+                // Fallback to mnemonic-based classification if MCInstrAnalysis not available
+                std::string operands_lower = info.operands;
+                std::transform(operands_lower.begin(), operands_lower.end(), operands_lower.begin(), ::tolower);
+                
+                if (operands_lower.find('*') != std::string::npos || 
+                    operands_lower.find('(') != std::string::npos ||
+                    operands_lower.find('%') != std::string::npos) {
+                    info.is_indirect = true;
+                }
+                
+                std::string mnemonic_lower = info.mnemonic;
+                std::transform(mnemonic_lower.begin(), mnemonic_lower.end(), mnemonic_lower.begin(), ::tolower);
+                
+                if (mnemonic_lower.rfind("call", 0) == 0 || mnemonic_lower == "bl" || mnemonic_lower == "blx") {
+                    info.is_call = true;
+                } else if (mnemonic_lower.rfind("jmp", 0) == 0 || mnemonic_lower == "b" || mnemonic_lower == "bra") {
+                    info.is_jump = true;
+                } else if (mnemonic_lower.rfind("ret", 0) == 0) {
+                    info.is_return = true;
+                }
+                
+                if (mnemonic_lower.length() > 1 && mnemonic_lower[0] == 'j' && mnemonic_lower != "jmp") {
+                    info.is_conditional_jump = true;
+                } else if (mnemonic_lower.length() > 1 && mnemonic_lower[0] == 'b' && mnemonic_lower != "b" && mnemonic_lower != "bl" && mnemonic_lower != "blx") {
+                    info.is_conditional_jump = true;
+                }
+            }
+            
+            // Parse target address for direct calls/jumps using MCInstrAnalysis
+            bool has_target = false;
+            
+            if (!info.is_indirect && instr_analysis_) {
+                uint64_t target = 0;
+                // Try to evaluate the branch target
+                if (instr_analysis_->evaluateBranch(inst, info.address, size, target)) {
+                    info.target_address = target;
+                    has_target = true;
+                }
+            }
+            
+            // Fallback to operand parsing if MCInstrAnalysis couldn't determine target
+            if (!has_target && !info.is_indirect) {
+                // For relative calls/jumps, LLVM AT&T syntax prints the displacement
+                // For direct absolute calls/jumps, LLVM prints the target address
+                // Parse the operands to determine the target
+                
+                // Check for hex with 0x/0X prefix
+                size_t hex_start = info.operands.find("0x");
+                if (hex_start == std::string::npos) {
+                    hex_start = info.operands.find("0X");
+                }
+                if (hex_start != std::string::npos) {
+                    size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", hex_start + 2);
+                    std::string hex_str = info.operands.substr(hex_start, hex_end - hex_start);
+                    try {
+                        uint64_t target_addr = std::stoull(info.operands.substr(hex_start), nullptr, 16);
+                        info.target_address = target_addr;
+                    } catch (...) {
+                        // Ignore parse errors
                     }
                 } else {
-                    // Direct absolute call/jump - LLVM prints the target address directly
-                    // Try to parse as absolute address (hex with or without 0x prefix, or decimal)
-                    
-                    // Check for hex with 0x/0X prefix
-                    size_t abs_hex_start = info.operands.find("0x");
-                    if (abs_hex_start == std::string::npos) {
-                        abs_hex_start = info.operands.find("0X");
+                    // If no hex with prefix, check for hex without prefix (all hex digits)
+                    std::string operands_copy = info.operands;
+                    bool all_hex = true;
+                    if (!operands_copy.empty() && operands_copy[0] == '-') {
+                        // Negative hex value - check rest
                     }
-                    if (abs_hex_start != std::string::npos) {
-                        // size_t hex_end = info.operands.find_first_not_of("0123456789abcdefABCDEF", abs_hex_start + 2);
+                    for (size_t i = 0; i < operands_copy.size(); ++i) {
+                        char c = operands_copy[i];
+                        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+                            all_hex = false;
+                            break;
+                        }
+                    }
+                    if (all_hex && !operands_copy.empty() && operands_copy != "-") {
                         try {
-                            uint64_t target_addr = std::stoull(info.operands.substr(abs_hex_start), nullptr, 16);
+                            uint64_t target_addr = std::stoull(info.operands, nullptr, 16);
                             info.target_address = target_addr;
                         } catch (...) {
                             // Ignore parse errors
                         }
-                    } else {
-                        // If no hex with prefix, check for hex without prefix (all hex digits)
-                        std::string abs_ops_copy = info.operands;
-                        bool all_hex = true;
-                        size_t abs_start_idx = 0;
-                        if (!abs_ops_copy.empty() && abs_ops_copy[0] == '-') {
-                            // Absolute addresses shouldn't be negative, but handle anyway
-                        }
-                        for (size_t i = abs_start_idx; i < abs_ops_copy.size(); ++i) {
-                            char c = abs_ops_copy[i];
-                            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
-                                all_hex = false;
-                                break;
-                            }
-                        }
-                        if (all_hex && !abs_ops_copy.empty() && abs_ops_copy != "-") {
-                            try {
-                                uint64_t target_addr = std::stoull(info.operands, nullptr, 16);
-                                info.target_address = target_addr;
-                            } catch (...) {
-                                // Ignore parse errors
-                            }
-                        }
-                        
-                        // If no hex, check for decimal address
-                        size_t abs_digit_start = info.operands.find_first_of("0123456789");
-                        if (abs_digit_start != std::string::npos) {
-                            size_t abs_digit_end = info.operands.find_first_not_of("0123456789", abs_digit_start);
-                            try {
-                                uint64_t target_addr = std::stoull(info.operands.substr(abs_digit_start, abs_digit_end - abs_digit_start), nullptr, 10);
-                                info.target_address = target_addr;
-                            } catch (...) {
-                                // Ignore parse errors
-                            }
+                    }
+                    
+                    // If no hex, check for decimal address
+                    size_t digit_start = info.operands.find_first_of("0123456789");
+                    if (digit_start != std::string::npos) {
+                        size_t digit_end = info.operands.find_first_not_of("0123456789", digit_start);
+                        std::string dec_str = info.operands.substr(digit_start, digit_end - digit_start);
+                        try {
+                            uint64_t target_addr = std::stoull(info.operands.substr(digit_start, digit_end - digit_start), nullptr, 10);
+                            info.target_address = target_addr;
+                        } catch (...) {
+                            // Ignore parse errors
                         }
                     }
                 }
             }
             
             info.format = "at&t";  // LLVM outputs AT&T syntax
-            
-            // Basic classification based on mnemonic (simplified without MCInstrAnalysis)
-            std::string mnemonic_lower = info.mnemonic;
-            std::transform(mnemonic_lower.begin(), mnemonic_lower.end(), mnemonic_lower.begin(), ::tolower);
-            
-            if (mnemonic_lower.rfind("call", 0) == 0 || mnemonic_lower == "bl" || mnemonic_lower == "blx") {
-                info.is_call = true;
-            } else if (mnemonic_lower.rfind("jmp", 0) == 0 || mnemonic_lower == "b" || mnemonic_lower == "bra") {
-                info.is_jump = true;
-            } else if (mnemonic_lower.rfind("ret", 0) == 0) {
-                info.is_return = true;
-            }
-            
-            // Check for conditional branches (simplified)
-            if (mnemonic_lower.length() > 1 && mnemonic_lower[0] == 'j' && mnemonic_lower != "jmp") {
-                info.is_conditional_jump = true;
-                info.is_jump = true;
-            } else if (mnemonic_lower.length() > 1 && mnemonic_lower[0] == 'b' && mnemonic_lower != "b" && mnemonic_lower != "bl" && mnemonic_lower != "blx") {
-                info.is_conditional_jump = true;
-                info.is_jump = true;
-            }
-            
-            // Indirect call detection
-            if (info.is_call && info.is_indirect) {
-                info.is_indirect = true;
-            }
             
             instructions.push_back(std::move(info));
             offset += size;

@@ -29,6 +29,13 @@ Unlike traditional packers or simple obfuscators, FORTRESS provides a **compiler
 | | Typed addresses (FileOffset, RVA, VA, SegmentVA) | ✅ Complete |
 | | Format-specific address converters (PE, ELF, Mach-O) | ✅ Complete |
 | | Round-trip normalization/denormalization | ✅ Complete |
+| **Advanced Static Analysis** | CFG Builder (Basic Blocks, Control Flow Graph) | ✅ Complete |
+| | Call Graph (Direct/Indirect calls, imports, recursion) | ✅ Complete |
+| | XREF Database (Cross-references) | 📋 Planned |
+| | Function Refiner (Confidence levels) | 📋 Planned |
+| | String Analysis | 📋 Planned |
+| | Metrics & Coverage | 📋 Planned |
+| | JSON Reporting | 📋 Planned |
 | **Virtualization Engine** | Heterogeneous VM architectures | 📋 Planned |
 | | Per-function VM selection | 📋 Planned |
 | | Per-build opcode diversification | 📋 Planned |
@@ -182,9 +189,9 @@ fortress analyze -i sample.exe --imports
 - Binary Info: 3/3 passing
 - Analysis Data Model: 72/72 passing
 - CFG Builder: 15/15 passing
-- Call Graph: 15/24 passing (core functionality working; 9 tests failing due to recursion detection, mutual recursion, edge merging, import resolution - infrastructure solid)
-- **Total: 153/162 tests passing**
-- Unsupported algorithms (SHA-3, BLAKE2b, BLAKE3): return explicit `UnsupportedOperation` errors
+- Call Graph Builder: 24/24 passing
+- LLVM MC Disassembler: 24/24 passing
+- **Total: 186/186 tests passing**
 
 **Release Build Status:**
 - Library and CLI build successfully
@@ -233,7 +240,7 @@ FORTRESS/
 | **Phase 2** | Binary Analyzer Core | ✅ Complete |
 | **Phase 3 — M1** | Analysis Data Model | ✅ Complete |
 | **Phase 3 — M2** | CFG Builder (Basic Blocks, Control Flow Graph) | ✅ Complete |
-| **Phase 3 — M3** | Call Graph (Direct/Indirect calls, imports, recursion) | ✅ Core Complete |
+| **Phase 3 — M3** | Call Graph (Direct/Indirect calls, imports, recursion) | ✅ Complete |
 | **Phase 3 — M4** | XREF Database (Cross-references) | 📋 Planned |
 | **Phase 3 — M5** | Function Refiner (Confidence levels) | 📋 Planned |
 | **Phase 3 — M6** | String Analysis | 📋 Planned |

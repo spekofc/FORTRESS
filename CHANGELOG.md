@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **LLVM MC Disassembler Hardening** (Phase 3 Milestone 2/3 Completion):
+  - Replaced heuristic size-based instruction classification with LLVM MCInstrAnalysis APIs
+  - Semantic classification using `isCall()`, `isBranch()`, `isReturn()`, `isIndirectBranch()`, `isConditionalBranch()`, `isIndirectCall()`
+  - Target address resolution via `evaluateBranch()` with proper sign-extension for rel8/rel32
+  - Indirect call detection via MCInst operand inspection (register/memory operands)
+  - Safe address arithmetic with overflow/underflow checks (`safe_add`, `safe_sub`, `safe_add_signed`)
+  - Canonical address validation for x86-64 (bits 63:48 all 0 or all 1)
+  - No silent fallback to StubDisassembler — returns nullptr on failure
+  - Disassembler interface exposed in public header for test injection
+- **Comprehensive Boundary Tests**:
+  - Zero displacement calls/jumps
+  - Positive/negative displacements (forward/backward branches)
+  - High address tests near UINT64_MAX with overflow handling
+  - Non-canonical address detection
+  - Mixed instruction sizes (1-byte NOP, 5-byte CALL, 1-byte RET)
+  - Truncated instruction handling
+- **Fixed Instruction Classification**:
+  - UD2 (0F 0B) correctly identified as valid instruction (not invalid)
+  - Added truly invalid encoding test (0xFF 0xFF)
+  - Differentiated: valid instruction, valid-but-exception-raising, invalid encoding, truncated sequence
+- **End-to-End Integration Tests**:
+  - Bytes → LLVM MC → InstructionInfo → CFGBuilder → CallGraphBuilder pipeline
+  - Direct call resolution with exact target addresses
+  - Indirect call through register (CALL RAX) detection
+  - Conditional branch (JNE) with fallthrough and taken paths
+- **Phase 3 Milestone 2 (CFG Builder)** marked ✅ Complete
+- **Phase 3 Milestone 3 (Call Graph)** marked ✅ Complete
+- **Test Suite**: 186/186 tests passing in Debug
+
 - **CFG Builder** (Phase 3 Milestone 2):
   - Control Flow Graph construction for binary analysis
   - Leader identification for basic block boundaries
