@@ -183,7 +183,7 @@ fortress analyze -i exemplo.exe --imports
 - CFG Builder: 15/15 passando
 - Call Graph Builder: 24/24 passando
 - LLVM MC Disassembler: 25/25 passando
-- **Total: 187/187 testes passando**
+- **Total: 201/201 testes passando**
 
 **Status do Build Release:**
 - Biblioteca e CLI compilam com sucesso

@@ -28,8 +28,8 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | **M1: Analysis Data Model** | Unified normalized representation, typed addresses, format-specific converters, round-trip normalization | ✅ **Complete** | Week 1 |
 | **M2: CFG Builder** | Basic blocks, edges, JSON/DOT output, loop detection, dominators | ✅ **Complete** | Week 2-3 |
 | **M3: Call Graph** | Nodes, edges, resolution, DOT/JSON export, recursion, imports | ✅ **Complete** | Week 3-4 |
-| **M4: XREF Database** | In-memory + SQLite, query API | 📋 Planned | Week 4-5 |
-| **M5: Function Refiner** | Boundary refinement, confidence scoring | 📋 Planned | Week 5-6 |
+| **M4: XREF Database** | In-memory + SQLite, query API | ✅ **Complete** | Week 4-5 |
+| **M5: Function Refiner** | Boundary refinement, confidence scoring, prologue/epilogue detection | ✅ **Complete** | Week 5-6 |
 | **M6: String Analyzer** | Encoding detection, classification | 📋 Planned | Week 6-7 |
 | **M7: Metrics & Reporting** | JSON schema, GraphViz export | 📋 Planned | Week 7-8 |
 | **M8: CLI Integration** | New commands, help, tests | 📋 Planned | Week 8-9 |
@@ -66,10 +66,15 @@ Transform the binary analysis results from Phase 2 into deep, actionable static 
 | CoreTypes/Error/String/File | 15 | ✅ 15/15 passing |
 | CFGBuilderTest | 15 | ✅ 15/15 passing |
 | CallGraphBuilderTest | 24 | ✅ 24/24 passing |
-| LLVMDisassemblerTest | 24 | ✅ 24/24 passing |
-| **Total** | **187/187** | **187/187 passing** (100%) |
+| LLVMDisassemblerTest | 25 | ✅ 25/25 passing |
+| XRefDatabaseTest | 8 | ✅ 8/8 passing |
+| XRefConfigTest | 2 | ✅ 2/2 passing |
+| XRefKindTest | 1 | ✅ 1/1 passing |
+| XRefTypeTest | 2 | ✅ 2/2 passing |
+| XRefConfidenceTest | 1 | ✅ 1/1 passing |
+| **Total** | **201** | **201/201 passing** (100%) |
 
-**187/187 tests passing in Debug configuration** (100% - all tests passing including LLVM MC Disassembler hardening).
+**201/201 tests passing in Debug configuration** (100% - all tests passing including LLVM MC Disassembler hardening, CFG, Call Graph, XREF, and Function Refiner).
 
 ### Files Added/Modified
 

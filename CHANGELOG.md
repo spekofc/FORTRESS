@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional branch (JNE) with fallthrough and taken paths
 - **Phase 3 Milestone 2 (CFG Builder)** marked ✅ Complete
 - **Phase 3 Milestone 3 (Call Graph)** marked ✅ Complete
-- **Test Suite**: 187/187 tests passing in Debug
+- **Test Suite**: 201/201 tests passing in Debug
 
 - **CFG Builder** (Phase 3 Milestone 2):
   - Control Flow Graph construction for binary analysis
@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Binary Analyzer**: Unified `BinaryAnalyzer` interface with automatic format detection, parser dispatch, post-processing, and validation
 - **CLI**: `fortress analyze` command with options for sections, imports, exports, functions, symbols, relocations, debug info, JSON output
 - **Build System**: CMake 3.25+ with Ninja, LLVM 18+ integration, GoogleTest via FetchContent, cross-platform support (Windows/Linux/macOS)
-- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model, CFG builder, call graph (153/162 passing; 9 failing due to recursion/merge edge cases)
+- **Tests**: Unit tests for core (error, Result, string utils, hashing, file utils), binary (format detection, data structures), PE, ELF, Mach-O parsers, analysis model, CFG builder, call graph, XREF, function refiner (201/201 passing)
 - **Documentation**: Comprehensive README (English/Portuguese), PHASE2_AUDIT.md, PHASE2_COMPLETION_REPORT.md, PHASE2_FINAL_SUMMARY.md, PHASE3_PLAN.md
 
 ### Changed

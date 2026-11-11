@@ -27,6 +27,7 @@ struct SectionInfo {
     SectionPermission permissions = SectionPermission::None;
     std::string characteristics; // Format-specific flags
     double entropy = 0.0;
+    std::vector<uint8_t> bytes; // Raw section data (when include_section_data is enabled)
 
     // Derived
     bool is_executable() const noexcept { return has_permission(permissions, SectionPermission::Execute); }
