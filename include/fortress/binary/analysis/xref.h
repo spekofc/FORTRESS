@@ -192,7 +192,44 @@ public:
 
     // SQLite persistence
     Result<void> save_to_sqlite_impl(const std::string& path) const;
-    Result<void> load_from_sqlite_impl(const std::string& path);
+    Result<void> load_from_sqlite_impl(const std::string& path) const;
 };
+
+// ============================================================================
+// XREF String Conversions
+// ============================================================================
+
+inline std::string to_string(XRefType type) {
+    switch (type) {
+        case XRefType::CodeToCode: return "CodeToCode";
+        case XRefType::CodeToData: return "CodeToData";
+        case XRefType::DataToCode: return "DataToCode";
+        case XRefType::DataToData: return "DataToData";
+        case XRefType::Relocation: return "Relocation";
+        case XRefType::Import: return "Import";
+        case XRefType::Export: return "Export";
+        default: return "Unknown";
+    }
+}
+
+inline std::string to_string(XRefKind kind) {
+    switch (kind) {
+        case XRefKind::Read: return "Read";
+        case XRefKind::Write: return "Write";
+        case XRefKind::Execute: return "Execute";
+        case XRefKind::XRefOffset: return "Offset";
+        default: return "Unknown";
+    }
+}
+
+inline std::string to_string(XRefConfidence conf) {
+    switch (conf) {
+        case XRefConfidence::Confirmed: return "Confirmed";
+        case XRefConfidence::High: return "High";
+        case XRefConfidence::Medium: return "Medium";
+        case XRefConfidence::Low: return "Low";
+        default: return "Unknown";
+    }
+}
 
 } // namespace fortress

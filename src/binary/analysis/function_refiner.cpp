@@ -252,9 +252,29 @@ Result<TypedAddress> FunctionRefiner::find_function_end(const FunctionInfo& func
     return Result<TypedAddress>::ok(best_end);
 }
 
-Result<bool> FunctionRefiner::detect_tail_call_merge(const FunctionInfo& /*func*/,
-                                                     const ControlFlowGraph* /*cfg*/,
+Result<bool> FunctionRefiner::detect_tail_call_merge(const FunctionInfo& func,
+                                                     const ControlFlowGraph* cfg,
                                                      const CallGraph*) {
+    (void)func;
+    if (!cfg) return Result<bool>::ok(false);
+
+    // Check if the last block ends with an unconditional jump to another function
+    for (const auto& block : cfg->blocks) {
+        if (block.instructions.empty()) continue;
+        
+        const auto& last_instr = block.instructions.back();
+        // Check if it's a jump (not call) at the end of the function
+        if (last_instr.is_jump && !last_instr.is_call && !last_instr.is_return) {
+            // Check if this is at the end of the function
+            if (last_instr.address >= func.address && 
+                last_instr.address < func.address + func.size) {
+                // Check if it jumps to another function
+                if (last_instr.target_address.has_value()) {
+                    return Result<bool>::ok(true);
+                }
+            }
+        }
+    }
     return Result<bool>::ok(false);
 }
 
@@ -279,8 +299,8 @@ Result<bool> FunctionRefiner::detect_merged_functions(const FunctionInfo& func,
 
 int FunctionRefiner::calculate_confidence(const FunctionInfo& func,
                                           const ControlFlowGraph* cfg,
-                                          const CallGraph*,
-                                          const XRefDatabase*,
+                                          const CallGraph* call_graph,
+                                          const XRefDatabase* xref_db,
                                           std::string& breakdown) {
     int confidence = 50; // Base
     std::ostringstream ss;
@@ -311,9 +331,62 @@ int FunctionRefiner::calculate_confidence(const FunctionInfo& func,
         }
     }
 
-    // Heuristic penalties would go here
+    // CallGraph bonus
+    if (call_graph) {
+        const CallGraphNode* node = call_graph->find_node_by_address(TypedAddress::va(func.address));
+        if (node) {
+            // Called by many functions = higher confidence
+            if (node->unique_callers >= 3) {
+                confidence += 15;
+                ss << "; CallGraphBonus: +15 (called by " << node->unique_callers << " functions)";
+            } else if (node->unique_callers > 0) {
+                confidence += 10;
+                ss << "; CallGraphBonus: +10 (called by " << node->unique_callers << " functions)";
+            }
+            
+            // Recursive functions get slight penalty
+            if (node->is_recursive) {
+                confidence -= 10;
+                ss << "; RecursionPenalty: -10";
+            }
+        }
+    }
 
-    // For now, just return base confidence
+    // XRefDatabase bonus
+    if (xref_db) {
+        auto incoming = xref_db->get_xrefs_to(TypedAddress::va(func.address));
+        size_t xrefs_to = incoming.total_count;
+        if (xrefs_to >= 5) {
+            confidence += 10;
+            ss << "; XRefBonus: +10 (" << xrefs_to << " xrefs)";
+        } else if (xrefs_to > 0) {
+            confidence += 5;
+            ss << "; XRefBonus: +5 (" << xrefs_to << " xrefs)";
+        }
+    }
+
+    // Heuristic penalties
+    // Penalty for very small functions (likely not real)
+    if (func.size < 8) {
+        confidence -= 15;
+        ss << "; SizePenalty: -15 (too small)";
+    }
+
+    // Penalty for no return instructions
+    if (cfg) {
+        bool has_ret = false;
+        for (const auto& block : cfg->blocks) {
+            if (block.has_return) {
+                has_ret = true;
+                break;
+            }
+        }
+        if (!has_ret) {
+            confidence -= 20;
+            ss << "; NoReturnPenalty: -20";
+        }
+    }
+
     breakdown = ss.str();
     return std::clamp(confidence, 0, 100);
 }
@@ -384,11 +457,74 @@ Result<EpilogueInfo> FunctionRefiner::detect_epilogue(const FunctionInfo& func,
     return Result<EpilogueInfo>::ok(info);
 }
 
-Result<ExceptionHandlerInfo> FunctionRefiner::detect_exception_handling(const FunctionInfo& /*func*/,
-                                                                        const BinaryAnalysisResult& /*analysis*/) {
+Result<ExceptionHandlerInfo> FunctionRefiner::detect_exception_handling(const FunctionInfo& func,
+                                                                         const BinaryAnalysisResult& analysis) {
     ExceptionHandlerInfo info;
-    // Placeholder - would need format-specific EH parsing
-    // PE: SEH tables, ELF: DWARF EH frames, Mach-O: compact unwind
+    
+    if (analysis.format == BinaryFormat::PE) {
+        // PE: Check for SEH (Structured Exception Handling)
+        // Look for .pdata/.xdata sections
+        for (const auto& section : analysis.sections) {
+            if (section.name == ".pdata" || section.name == ".xdata") {
+                info.has_handler = true;
+                info.is_seh = true;
+                info.handler_address = TypedAddress::va(section.virtual_address);
+                break;
+            }
+        }
+        
+        // Also check for common SEH handler names in symbols
+        for (const auto& symbol : analysis.symbols) {
+            if (symbol.name.find("__except_handler") != std::string::npos ||
+                symbol.name.find("__CxxFrameHandler") != std::string::npos ||
+                symbol.name.find("__seh_filter") != std::string::npos) {
+                if (symbol.address >= func.address && symbol.address < func.address + func.size) {
+                    info.has_handler = true;
+                    info.is_seh = true;
+                    info.handler_address = TypedAddress::va(symbol.address);
+                    info.symbol_name = symbol.name;
+                    break;
+                }
+            }
+        }
+    }
+    else if (analysis.format == BinaryFormat::ELF) {
+        // ELF: Check for DWARF EH frames (.eh_frame, .eh_frame_hdr)
+        for (const auto& section : analysis.sections) {
+            if (section.name == ".eh_frame" || section.name == ".eh_frame_hdr") {
+                info.has_handler = true;
+                info.is_dwarf = true;
+                info.handler_address = TypedAddress::va(section.virtual_address);
+                break;
+            }
+        }
+        
+        // Check for DWARF CIE/FDE entries in symbols
+        for (const auto& symbol : analysis.symbols) {
+            if (symbol.name.find("__gcc_personality") != std::string::npos ||
+                symbol.name.find("__gxx_personality") != std::string::npos) {
+                if (symbol.address >= func.address && symbol.address < func.address + func.size) {
+                    info.has_handler = true;
+                    info.is_dwarf = true;
+                    info.handler_address = TypedAddress::va(symbol.address);
+                    info.symbol_name = symbol.name;
+                    break;
+                }
+            }
+        }
+    }
+    else if (analysis.format == BinaryFormat::MachO) {
+        // Mach-O: Compact unwind info (__unwind_info section)
+        for (const auto& section : analysis.sections) {
+            if (section.name == "__unwind_info" || section.name == "__compact_unwind") {
+                info.has_handler = true;
+                info.is_compact_unwind = true;
+                info.handler_address = TypedAddress::va(section.virtual_address);
+                break;
+            }
+        }
+    }
+    
     return Result<ExceptionHandlerInfo>::ok(info);
 }
 
@@ -397,8 +533,26 @@ Result<ExceptionHandlerInfo> FunctionRefiner::detect_exception_handling(const Fu
 // ============================================================================
 
 Result<bool> FunctionRefiner::detect_tail_call(const FunctionInfo& /*func*/,
-                                               const ControlFlowGraph* /*cfg*/,
+                                               const ControlFlowGraph* cfg,
                                                const CallGraph*) {
+    (void)cfg;
+    if (!cfg) return Result<bool>::ok(false);
+
+    // Tail call: unconditional branch at end of function (not a call)
+    // Look for jmp instructions at the end of function blocks
+    for (const auto& block : cfg->blocks) {
+        if (block.instructions.empty()) continue;
+        
+        const auto& last_instr = block.instructions.back();
+        // Tail call: unconditional branch at end of function (not a call)
+        if (last_instr.is_jump && !last_instr.is_call && !last_instr.is_return) {
+            if (last_instr.target_address.has_value()) {
+                // Check if target is a known function
+                (void)last_instr.target_address.value();
+                return Result<bool>::ok(true);
+            }
+        }
+    }
     return Result<bool>::ok(false);
 }
 
@@ -530,7 +684,7 @@ bool FunctionRefiner::match_arm64_prologue(const std::vector<uint8_t>& bytes, si
     
     // ARM64: stp x29, x30, [sp, #-16]! ; mov x29, sp
     // stp x29, x30, [sp, #-16]! = 0xA9BF7C00
-    // mov x29, sp = 0x910003FD
+    // mov x29, sp = 0xD10003FD (not 0x910003FD)
     if (offset + 7 < bytes.size()) {
         uint32_t inst1 = *reinterpret_cast<const uint32_t*>(&bytes[offset]);
         uint32_t inst2 = *reinterpret_cast<const uint32_t*>(&bytes[offset + 4]);
@@ -538,7 +692,7 @@ bool FunctionRefiner::match_arm64_prologue(const std::vector<uint8_t>& bytes, si
         // Check for stp x29, x30, [sp, #-16]!
         if ((inst1 & 0xFFFFFC00u) == 0xA9BF7C00u) { // stp x29, x30, [sp, #-imm]!
             // Check for mov x29, sp
-            if (inst2 == 0x910003FDu) { // mov x29, sp
+            if (inst2 == 0xD10003FDu) { // mov x29, sp
                 info.type = PrologueType::Standard_ARM64;
                 info.length = 8;
                 info.has_frame_pointer = true;

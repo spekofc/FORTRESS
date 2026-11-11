@@ -535,7 +535,7 @@ Result<void> XRefDatabase::save_to_sqlite_impl(const std::string& path) const {
 #endif
 }
 
-Result<void> XRefDatabase::load_from_sqlite_impl(const std::string& path) {
+Result<void> XRefDatabase::load_from_sqlite_impl(const std::string& path) const {
 #if defined(FORTRESS_USE_SQLITE) && FORTRESS_USE_SQLITE
     sqlite3* db = nullptr;
     int rc = sqlite3_open(path.c_str(), &db);

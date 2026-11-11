@@ -58,6 +58,7 @@ struct ExceptionHandlerInfo {
     bool is_compact_unwind = false; // Mach-O compact unwind
     TypedAddress handler_address;
     TypedAddress unwind_info_address;
+    std::string symbol_name;       // Symbol name of the handler
 };
 
 struct RefinedFunctionInfo {

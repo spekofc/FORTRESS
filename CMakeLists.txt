@@ -48,6 +48,9 @@ enable_language(C)
 # Find LLVM
 find_package(LLVM REQUIRED CONFIG)
 
+# Find nlohmann_json for CLI JSON output
+find_package(nlohmann_json 3.10 REQUIRED)
+
 # LLVM components needed for binary analysis and disassembly
 set(LLVM_COMPONENTS
     Support

@@ -3,6 +3,7 @@
 add_executable(fortress
     main.cpp
     analyze_cmd.cpp
+    cfg_cmd.cpp
     output.cpp
 )
 
@@ -10,6 +11,7 @@ target_link_libraries(fortress PRIVATE
     fortress_core
     fortress_binary
     LLVMSupport
+    nlohmann_json::nlohmann_json
 )
 
 target_include_directories(fortress PRIVATE

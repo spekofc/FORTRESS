@@ -91,6 +91,7 @@ namespace fortress::cli {
 
 // Forward declarations
 int analyze_command(const std::vector<std::string>& args);
+int cfg_command(const std::vector<std::string>& args);
 
 } // namespace fortress::cli
 
@@ -98,6 +99,7 @@ int main(int argc, char* argv[]) {
     fortress::cli::CLI cli(argc, argv);
 
     cli.register_command({"analyze", "Analyze a binary file", "fortress analyze -i <file> [options]", fortress::cli::analyze_command});
+    cli.register_command({"cfg", "Control Flow Graph analysis", "fortress cfg -i <file> [options]", fortress::cli::cfg_command});
 
     // TODO: Add more commands as implemented
     // cli.register_command({"protect", "Protect a binary", "fortress protect -i <file> -o <output> [options]", protect_command});

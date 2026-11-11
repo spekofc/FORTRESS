@@ -362,4 +362,33 @@ private:
     void compute_statistics(CallGraph& graph) const;
 };
 
+// ============================================================================
+// CallGraph String Conversions
+// ============================================================================
+
+inline std::string to_string(CallResolutionConfidence conf) {
+    switch (conf) {
+        case CallResolutionConfidence::Unknown: return "Unknown";
+        case CallResolutionConfidence::Low: return "Low";
+        case CallResolutionConfidence::Medium: return "Medium";
+        case CallResolutionConfidence::High: return "High";
+        case CallResolutionConfidence::Confirmed: return "Confirmed";
+        default: return "Unknown";
+    }
+}
+
+inline std::string to_string(CallEdgeType type) {
+    switch (type) {
+        case CallEdgeType::Direct: return "Direct";
+        case CallEdgeType::Indirect: return "Indirect";
+        case CallEdgeType::Import: return "Import";
+        case CallEdgeType::Thunk: return "Thunk";
+        case CallEdgeType::TailCall: return "TailCall";
+        case CallEdgeType::Recursive: return "Recursive";
+        case CallEdgeType::MutualRecursive: return "MutualRecursive";
+        case CallEdgeType::External: return "External";
+        default: return "Unknown";
+    }
+}
+
 } // namespace fortress

@@ -8,6 +8,8 @@ add_library(fortress_binary STATIC
     analysis/function_refiner.cpp
     analysis/xref.cpp
     analysis/llvm_disassembler.cpp
+    analysis/string_analyzer.cpp
+    analysis/metrics.cpp
     formats/pe/pe_parser.cpp
     formats/elf/elf_parser.cpp
     formats/macho/macho_parser.cpp
@@ -53,6 +55,8 @@ install(FILES
     ../../include/fortress/binary/analysis/call_graph.h
     ../../include/fortress/binary/analysis/xref.h
     ../../include/fortress/binary/analysis/function_refiner.h
+    ../../include/fortress/binary/analysis/string_analyzer.h
+    ../../include/fortress/binary/analysis/metrics.h
     ../../include/fortress/binary/formats/pe/pe_parser.h
     ../../include/fortress/binary/formats/pe/pe_address_converter.h
     ../../include/fortress/binary/formats/elf/elf_parser.h

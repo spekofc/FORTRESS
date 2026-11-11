@@ -328,4 +328,23 @@ private:
     std::string cfg_to_dot(const ControlFlowGraph& cfg, const std::string& graph_name) const;
 };
 
+// ============================================================================
+// CFG String Conversions
+// ============================================================================
+
+inline std::string to_string(CFGEdgeType type) {
+    switch (type) {
+        case CFGEdgeType::Fallthrough: return "Fallthrough";
+        case CFGEdgeType::ConditionalBranch: return "ConditionalBranch";
+        case CFGEdgeType::UnconditionalBranch: return "UnconditionalBranch";
+        case CFGEdgeType::Call: return "Call";
+        case CFGEdgeType::Return: return "Return";
+        case CFGEdgeType::IndirectBranch: return "IndirectBranch";
+        case CFGEdgeType::IndirectCall: return "IndirectCall";
+        case CFGEdgeType::ExceptionEdge: return "ExceptionEdge";
+        case CFGEdgeType::InterruptEdge: return "InterruptEdge";
+        default: return "Unknown";
+    }
+}
+
 } // namespace fortress
