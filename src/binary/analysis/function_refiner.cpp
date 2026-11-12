@@ -684,7 +684,7 @@ bool FunctionRefiner::match_arm64_prologue(const std::vector<uint8_t>& bytes, si
     
     // ARM64: stp x29, x30, [sp, #-16]! ; mov x29, sp
     // stp x29, x30, [sp, #-16]! = 0xA9BF7C00
-    // mov x29, sp = 0xD10003FD (not 0x910003FD)
+    // mov x29, sp = 0x910003FD
     if (offset + 7 < bytes.size()) {
         uint32_t inst1 = *reinterpret_cast<const uint32_t*>(&bytes[offset]);
         uint32_t inst2 = *reinterpret_cast<const uint32_t*>(&bytes[offset + 4]);

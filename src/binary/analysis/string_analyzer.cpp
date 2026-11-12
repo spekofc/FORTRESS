@@ -370,10 +370,10 @@ Result<std::string> StringAnalyzer::export_json(const StringQueryResult& query, 
 // ============================================================================
 
 std::vector<uint8_t> StringAnalyzer::extract_section_bytes(const BinaryAnalysisResult& /*analysis*/,
-                                                           const SectionInfo& /*section*/) const {
-    // In a real implementation, this would read from the binary file
-    // For now, return empty - the actual bytes would come from the binary parser
-    return {};
+                                                           const SectionInfo& section) const {
+    // Use the section bytes directly from the analysis result
+    // The section.bytes should be populated when include_section_data is enabled in AnalysisOptions
+    return section.bytes;
 }
 
 Result<void> StringAnalyzer::extract_ascii_strings(const BinaryAnalysisResult& analysis) {
